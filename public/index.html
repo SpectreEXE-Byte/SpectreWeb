@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPECTRE.EXE // PANEL CONTROL</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background-color: #0a0a0c; color: #d2d2e1; padding: 40px; }
+        .dashboard { max-width: 1100px; margin: 0 auto; background: #0f0f12; border: 1.2px solid #9b00ff; border-radius: 6px; overflow: hidden; box-shadow: 0 0 20px rgba(155, 0, 255, 0.15); }
+        .header { background: #151518; padding: 20px; border-bottom: 1.2px solid #1c1c24; display: flex; justify-content: space-between; align-items: center; }
+        .title { font-size: 15px; letter-spacing: 1px; color: #9b00ff; font-weight: bold; }
+        .panel { padding: 30px; display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        .controls, .display { background: #0a0a0c; border: 1.2px solid #1c1c24; border-radius: 4px; padding: 20px; }
+        h3 { font-size: 13px; margin-bottom: 15px; color: #b4b4c8; border-bottom: 1px solid #1c1c24; padding-bottom: 5px; letter-spacing: 0.5px; }
+        .input-group { margin-bottom: 15px; }
+        input { width: 100%; padding: 11px; background: #151518; border: 1.2px solid #1c1c24; color: #fff; border-radius: 4px; font-size: 11px; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: #9b00ff; }
+        button { width: 100%; padding: 11px; background: #151518; border: 1.2px solid #1c1c24; color: #9b00ff; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; transition: all 0.2s; }
+        button:hover { background: #1c0e21; border-color: #9b00ff; }
+        .danger-btn { color: #ff3333; }
+        .danger-btn:hover { background: #260f0f; border-color: #ff3333; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1c1c24; }
+        th { color: #6e6e7d; font-weight: normal; text-transform: uppercase; font-size: 11px; }
+        .status-active { color: #00ff66; font-weight: bold; }
+        .status-banned { color: #ff3333; font-weight: bold; }
+        .executors-list { font-size: 11px; color: #8c8c9b; display: block; margin-top: 4px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="header">
+        <div class="title">SPECTRE.EXE // CORE NETWORK TELEMETRY MANAGEMENT</div>
+    </div>
+    
+    <div class="panel">
+        <div class="controls">
+            <h3>LOGGING HOOK PATH</h3>
+            <div class="input-group">
+                <input type="text" id="webhookUrl" placeholder="DISCORD WEBHOOK LINK...">
+            </div>
+            <button onclick="updateWebhook()" style="margin-bottom: 30px;">SAVE TELEMETRY ROUTE</button>
+
+            <h3>REGISTRY ACTIONS</h3>
+            <div class="input-group">
+                <input type="text" id="targetKey" placeholder="TARGET KEY STRING...">
+            </div>
+            <button onclick="createKey()" style="margin-bottom: 10px;">GENERATE ENTRY</button>
+            <button onclick="banKey()" class="danger-btn" style="margin-bottom: 10px;">BLACKLIST ACCESS</button>
+            <button onclick="deleteKey()" class="danger-btn">PURGE ENTRY</button>
+        </div>
+        
+        <div class="display">
+            <h3>ACTIVE LICENSE REGISTRY TRACKING</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>KEY STRING</th>
+                        <th>STATUS</th>
+                        <th>RUNS</th>
+                        <th>EXECUTOR HARDWARE SIGNATURE FOOTPRINT</th>
+                    </tr>
+                </thead>
+                <tbody id="keyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Relative tracking target routes allowing local and automated remote operations cleanly
+    const API = "/api";
+
+    async function fetchKeys() {
+        try {
+            const res = await fetch(`${API}/admin/keys`);
+            const data = await res.json();
+            const tbody = document.getElementById('keyTableBody');
+            tbody.innerHTML = '';
+            
+            for (const [key, info] of Object.entries(data)) {
+                let execs = [];
+                for (const [execName, count] of Object.entries(info.executors)) {
+                    // Revert database safe naming structure back to normal rendering layout
+                    const displayName = execName.replace(/_/g, '.');
+                    execs.push(`${displayName} [x${count}]`);
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${key}</strong></td>
+                    <td class="status-${info.status}">${info.status.toUpperCase()}</td>
+                    <td>${info.executions}</td>
+                    <td><span class="executors-list">${execs.join(', ') || 'No hardware executions captured yet.'}</span></td>
+                `;
+                tbody.appendChild(tr);
+            }
+        } catch (e) {
+            console.error("Tracking retrieval interrupted:", e);
+        }
+    }
+
+    async function createKey() {
+        const key = document.getElementById('targetKey').value.trim();
+        if(!key) return alert("Key assignment string cannot be blank.");
+        await fetch(`${API}/api/admin/keys/create`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key })
+        });
+        document.getElementById('targetKey').value = "";
+        fetchKeys();
+    }
+
+    async function banKey() {
+        const key = document.getElementById('targetKey').value.trim();
+        if(!key) return alert("Target assignment field required.");
+        await fetch(`${API}/api/admin/keys/ban`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key })
+        });
+        document.getElementById('targetKey').value = "";
+        fetchKeys();
+    }
+
+    async function deleteKey() {
+        const key = document.getElementById('targetKey').value.trim();
+        if(!key) return alert("Target assignment field required.");
+        if(!confirm("Purge license from record data permanently?")) return;
+        await fetch(`${API}/api/admin/keys/delete`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key })
+        });
+        document.getElementById('targetKey').value = "";
+        fetchKeys();
+    }
+
+    async function updateWebhook() {
+        const url = document.getElementById('webhookUrl').value.trim();
+        await fetch(`${API}/api/admin/settings/webhook`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url })
+        });
+        alert("Discord system logging route path saved successfully.");
+    }
+
+    // High frequency long polling updates to refresh the metrics display panel
+    setInterval(fetchKeys, 3000);
+    fetchKeys();
+</script>
+</body>
+</html>

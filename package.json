@@ -1,0 +1,14 @@
+{
+  "name": "spectre-core-telemetry",
+  "version": "1.0.0",
+  "description": "Central licensing and telemetry layer for Spectre.EXE",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongodb": "^6.5.0"
+  }
+}
