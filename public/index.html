@@ -71,83 +71,55 @@
 
 <script>
     // Relative tracking target routes allowing local and automated remote operations cleanly
-    const API = "/api";
+// Change the API constant definition to an empty string
+const API = ""; 
 
-    async function fetchKeys() {
-        try {
-            const res = await fetch(`${API}/admin/keys`);
-            const data = await res.json();
-            const tbody = document.getElementById('keyTableBody');
-            tbody.innerHTML = '';
-            
-            for (const [key, info] of Object.entries(data)) {
-                let execs = [];
-                for (const [execName, count] of Object.entries(info.executors)) {
-                    // Revert database safe naming structure back to normal rendering layout
-                    const displayName = execName.replace(/_/g, '.');
-                    execs.push(`${displayName} [x${count}]`);
-                }
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${key}</strong></td>
-                    <td class="status-${info.status}">${info.status.toUpperCase()}</td>
-                    <td>${info.executions}</td>
-                    <td><span class="executors-list">${execs.join(', ') || 'No hardware executions captured yet.'}</span></td>
-                `;
-                tbody.appendChild(tr);
-            }
-        } catch (e) {
-            console.error("Tracking retrieval interrupted:", e);
-        }
-    }
+async function createKey() {
+    const key = document.getElementById('targetKey').value.trim();
+    if(!key) return alert("Key assignment string cannot be blank.");
+    await fetch(`${API}/api/admin/keys/create`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ key })
+    });
+    document.getElementById('targetKey').value = "";
+    fetchKeys();
+}
 
-    async function createKey() {
-        const key = document.getElementById('targetKey').value.trim();
-        if(!key) return alert("Key assignment string cannot be blank.");
-        await fetch(`${API}/api/admin/keys/create`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ key })
-        });
-        document.getElementById('targetKey').value = "";
-        fetchKeys();
-    }
+async function banKey() {
+    const key = document.getElementById('targetKey').value.trim();
+    if(!key) return alert("Target assignment field required.");
+    await fetch(`${API}/api/admin/keys/ban`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ key })
+    });
+    document.getElementById('targetKey').value = "";
+    fetchKeys();
+}
 
-    async function banKey() {
-        const key = document.getElementById('targetKey').value.trim();
-        if(!key) return alert("Target assignment field required.");
-        await fetch(`${API}/api/admin/keys/ban`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ key })
-        });
-        document.getElementById('targetKey').value = "";
-        fetchKeys();
-    }
+async function deleteKey() {
+    const key = document.getElementById('targetKey').value.trim();
+    if(!key) return alert("Target assignment field required.");
+    if(!confirm("Purge license from record data permanently?")) return;
+    await fetch(`${API}/api/admin/keys/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ key })
+    });
+    document.getElementById('targetKey').value = "";
+    fetchKeys();
+}
 
-    async function deleteKey() {
-        const key = document.getElementById('targetKey').value.trim();
-        if(!key) return alert("Target assignment field required.");
-        if(!confirm("Purge license from record data permanently?")) return;
-        await fetch(`${API}/api/admin/keys/delete`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ key })
-        });
-        document.getElementById('targetKey').value = "";
-        fetchKeys();
-    }
-
-    async function updateWebhook() {
-        const url = document.getElementById('webhookUrl').value.trim();
-        await fetch(`${API}/api/admin/settings/webhook`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ url })
-        });
-        alert("Discord system logging route path saved successfully.");
-    }
+async function updateWebhook() {
+    const url = document.getElementById('webhookUrl').value.trim();
+    await fetch(`${API}/api/admin/settings/webhook`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ url })
+    });
+    alert("Discord system logging route path saved successfully.");
+}
 
     // High frequency long polling updates to refresh the metrics display panel
     setInterval(fetchKeys, 3000);
