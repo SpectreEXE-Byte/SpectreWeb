@@ -9,12 +9,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-// Middleware Pipeline
+// ============================================================================
+// 1. GLOBAL MIDDLEWARE
+// ============================================================================
 app.use(express.json());
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Database Connection Structure
+// ============================================================================
+// 2. DATABASE CONFIGURATION & CONNECTIVITY
+// ============================================================================
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('>>> Spectre Matrix Engine Connected to MongoDB Atlas Cluster.'))
     .catch(err => console.error('!!! Database Connection Fault Vector:', err));
@@ -66,11 +69,10 @@ async function dispatchSecurityAlert(title, description, color = 10027263) {
 }
 
 // ============================================================================
--- CENTRAL TELEMETRY GATEWAY ROUTE (Called by Roblox Clients)
+// 3. CORE TELEMETRY GATEWAY ROUTE (Called by Roblox Clients)
 // ============================================================================
 app.post('/api/verify', async (req, res) => {
     const { key, username, hwid, executor } = req.body;
-    const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     if (!key) return res.status(400).json({ success: false, message: "Missing license validation key." });
 
@@ -133,7 +135,7 @@ app.post('/api/verify', async (req, res) => {
 });
 
 // ============================================================================
--- CENTRAL DASHBOARD API CONTROL LAYERS
+// 4. CENTRAL DASHBOARD API CONTROL LAYERS
 // ============================================================================
 app.get('/api/admin/metrics', async (req, res) => {
     try {
@@ -175,4 +177,18 @@ app.post('/api/admin/keys/blacklist', async (req, res) => {
     }
 });
 
+// ============================================================================
+// 5. STATIC ASSET HOSTING & ROUTE FALLBACKS
+// ============================================================================
+// This must remain below the API endpoints to stop it from intercepting API calls
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Fallback catch-all to route to the dashboard interface home page if an unmapped URL is hit
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ============================================================================
+// 6. ENGINE STARTUP
+// ============================================================================
 app.listen(PORT, () => console.log(`>>> Spectre Framework Processing Node Running Online on Port ${PORT}`));
