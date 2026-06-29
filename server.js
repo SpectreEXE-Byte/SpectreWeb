@@ -9,20 +9,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-// ============================================================================
-// 1. GLOBAL MIDDLEWARE
-// ============================================================================
+// 1. GLOBAL INITIALIZATION PIPELINE
 app.use(express.json());
 app.use(cors());
 
-// ============================================================================
-// 2. DATABASE CONFIGURATION & CONNECTIVITY
-// ============================================================================
+// 2. STABLE DATABASE MAPPING LAYER
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('>>> Spectre Matrix Engine Connected to MongoDB Atlas Cluster.'))
     .catch(err => console.error('!!! Database Connection Fault Vector:', err));
 
-// Database Key Model Setup (Includes Hardware Locks & Auto-Expiring Indexes)
 const keySchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true },
     isBlacklisted: { type: Boolean, default: false },
@@ -34,11 +29,9 @@ const keySchema = new mongoose.Schema({
     expiresAt: { type: Date, required: true }
 });
 
-// Automated DB Engine Rule: Purge data document automatically when current time passes expiresAt
 keySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const Key = mongoose.model('Key', keySchema);
 
-// Security Log Stream Model
 const logSchema = new mongoose.Schema({
     event: String,
     key: String,
@@ -50,7 +43,6 @@ const logSchema = new mongoose.Schema({
 });
 const AuditLog = mongoose.model('AuditLog', logSchema);
 
-// Embedded Webhook Dispatch System
 async function dispatchSecurityAlert(title, description, color = 10027263) {
     if (!DISCORD_WEBHOOK_URL) return;
     try {
@@ -68,26 +60,16 @@ async function dispatchSecurityAlert(title, description, color = 10027263) {
     }
 }
 
-// ============================================================================
-// 3. CORE TELEMETRY GATEWAY ROUTE (Called by Roblox Clients)
-// ============================================================================
+// 3. EXPLICIT API ROUTE BOUNDARIES
 app.post('/api/verify', async (req, res) => {
     const { key, username, hwid, executor } = req.body;
-
     if (!key) return res.status(400).json({ success: false, message: "Missing license validation key." });
 
     try {
         const targetKey = await Key.findOne({ key });
+        if (!targetKey) return res.status(404).json({ success: false, message: "Token unrecognized." });
+        if (targetKey.isBlacklisted) return res.status(403).json({ success: false, message: `ACCESS REVOKED: ${targetKey.blacklistReason}` });
 
-        if (!targetKey) {
-            return res.status(404).json({ success: false, message: "Token unrecognized in global cluster." });
-        }
-
-        if (targetKey.isBlacklisted) {
-            return res.status(403).json({ success: false, message: `ACCESS REVOKED: ${targetKey.blacklistReason}` });
-        }
-
-        // --- FIRST TIME ACTIVATION BOUNDARY LOCKING ---
         if (!targetKey.assignedUser && !targetKey.assignedHWID) {
             targetKey.assignedUser = username;
             targetKey.assignedHWID = hwid;
@@ -95,48 +77,31 @@ app.post('/api/verify', async (req, res) => {
             await targetKey.save();
 
             await AuditLog.create({ event: "INITIALIZATION", key, username, hwid, executor, status: "SUCCESS" });
-            await dispatchSecurityAlert(
-                "LICENSE KEY ACTIVATED & LOCKED",
-                `**Token:** \`${key}\`\n**Claimed By:** \`${username}\`\n**Machine HWID:** \`${hwid}\`\n**Client Layer:** ${executor}`,
-                5177087
-            );
-
+            await dispatchSecurityAlert("LICENSE KEY ACTIVATED & LOCKED", `**Token:** \`${key}\`\n**Claimed By:** \`${username}\``, 5177087);
             return res.status(200).json({ success: true, message: "Hardware mapping registered cleanly." });
         }
 
-        // --- ENFORCED RE-AUTHENTICATION & SECURITY POLICIES ---
         let infractions = [];
-        if (targetKey.assignedUser !== username) infractions.push(`User Mismatch (Bound: ${targetKey.assignedUser}, Claiming: ${username})`);
-        if (targetKey.assignedHWID !== hwid) infractions.push("Hardware Profile Spoof Verification Failure");
+        if (targetKey.assignedUser !== username) infractions.push(`User Mismatch`);
+        if (targetKey.assignedHWID !== hwid) infractions.push("HWID Mismatch");
 
         if (infractions.length > 0) {
             const compositeReason = infractions.join(" | ");
             targetKey.isBlacklisted = true;
-            targetKey.blacklistReason = `Identity Hijack Attempt: ${compositeReason}`;
+            targetKey.blacklistReason = `Identity Hijack: ${compositeReason}`;
             await targetKey.save();
 
             await AuditLog.create({ event: "BLACKLIST_AUTO", key, username, hwid, executor, status: "TERMINATED" });
-            await dispatchSecurityAlert(
-                "CRITICAL SECURITY COMPLIANCE VIOLATION",
-                `**Token Suspended:** \`${key}\`\n**Violator Username:** \`${username}\`\n**Violator HWID:** \`${hwid}\`\n**Breach Vectors:** ${compositeReason}`,
-                16711680
-            );
-
-            return res.status(403).json({ success: false, message: "HARDWARE LOCK BREACH ERROR. ACCOUNT PERMANENTLY SUSPENDED." });
+            return res.status(403).json({ success: false, message: "HARDWARE LOCK BREACH ERROR." });
         }
 
-        // Successful Verification Pass
         await AuditLog.create({ event: "HANDSHAKE", key, username, hwid, executor, status: "PASS" });
         return res.status(200).json({ success: true, message: "Verification clear." });
-
     } catch (err) {
-        return res.status(500).json({ success: false, message: "Internal verification processing crash." });
+        return res.status(500).json({ success: false, message: "Crash error internal." });
     }
 });
 
-// ============================================================================
-// 4. CENTRAL DASHBOARD API CONTROL LAYERS
-// ============================================================================
 app.get('/api/admin/metrics', async (req, res) => {
     try {
         const totalKeys = await Key.countDocuments();
@@ -145,46 +110,38 @@ app.get('/api/admin/metrics', async (req, res) => {
         const recentLogs = await AuditLog.find().sort({ timestamp: -1 }).limit(10);
         const keysList = await Key.find().sort({ createdAt: -1 });
 
-        res.json({ totalKeys, activeKeys, blacklistedKeys, recentLogs, keysList });
+        return res.status(200).json({ totalKeys, activeKeys, blacklistedKeys, recentLogs, keysList });
     } catch (err) {
-        res.status(500).json({ error: "Metrics pipeline failure." });
+        return res.status(500).json({ success: false, error: "Metrics database pipeline failure." });
     }
 });
 
 app.post('/api/admin/keys/create', async (req, res) => {
-    let { customKey, durationHours } = req.body;
     try {
-        const hours = Number(durationHours) || 24;
-        const generatedKey = customKey || "SPECTRE-" + Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const { customKey, durationHours } = req.body;
+        const hours = Number(durationHours || 24);
+        const generatedKey = customKey || "SPECTRE-" + Math.random().toString(36).substring(2, 10).toUpperCase();
         const expirationTime = new Date(Date.now() + (hours * 60 * 60 * 1000));
 
         const newKey = await Key.create({ key: generatedKey, expiresAt: expirationTime });
-        await dispatchSecurityAlert("NEW SYSTEM KEY GENERATED", `**Key Token:** \`${generatedKey}\`\n**Lifespan Allocation:** ${hours} Hour(s)\n**Expires On:** ${expirationTime.toUTCString()}`, 10027263);
-        res.json({ success: true, key: newKey });
+        return res.status(200).json({ success: true, key: newKey });
     } catch (err) {
-        res.status(500).json({ success: false, error: "Token minting allocation failure." });
+        return res.status(500).json({ success: false, error: err.message });
     }
 });
 
 app.post('/api/admin/keys/blacklist', async (req, res) => {
-    const { key, reason } = req.body;
     try {
-        const target = await Key.findOneAndUpdate({ key }, { isBlacklisted: true, blacklistReason: reason || "Manual Administrator Revocation" }, { new: true });
-        if (!target) return res.status(404).json({ success: false, message: "Target token key not discovered." });
-        await dispatchSecurityAlert("MANUAL OPERATOR BLOCK ENFORCED", `**Target Token:** \`${key}\`\n**Operator Reason:** ${reason}`, 16738320);
-        res.json({ success: true, message: "Token flagged and blocked." });
+        const { key, reason } = req.body;
+        const target = await Key.findOneAndUpdate({ key }, { isBlacklisted: true, blacklistReason: reason || "Manual Operation" }, { new: true });
+        if (!target) return res.status(404).json({ success: false, error: "Key missing." });
+        return res.status(200).json({ success: true, message: "Token flagged." });
     } catch (err) {
-        res.status(500).json({ success: false, error: "Blacklist command modification error." });
+        return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// ============================================================================
-// 5. STATIC ASSET HOSTING
-// ============================================================================
-// Located completely below the route logic vectors to isolate files cleanly from API requests
+// 4. STATIC ASSET DEPLOYMENT (Strictly at the bottom)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ============================================================================
-// 6. ENGINE STARTUP
-// ============================================================================
-app.listen(PORT, () => console.log(`>>> Spectre Framework Processing Node Running Online on Port ${PORT}`));
+app.listen(PORT, () => console.log(`>>> Spectre Core Base Online on Port ${PORT}`));
