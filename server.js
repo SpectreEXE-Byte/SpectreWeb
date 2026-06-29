@@ -152,13 +152,14 @@ app.get('/api/admin/metrics', async (req, res) => {
 });
 
 app.post('/api/admin/keys/create', async (req, res) => {
-    const { customKey, durationHours } = req.body;
+    let { customKey, durationHours } = req.body;
     try {
+        const hours = Number(durationHours) || 24;
         const generatedKey = customKey || "SPECTRE-" + Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
-        const expirationTime = new Date(Date.now() + (Number(durationHours || 24) * 60 * 60 * 1000));
+        const expirationTime = new Date(Date.now() + (hours * 60 * 60 * 1000));
 
         const newKey = await Key.create({ key: generatedKey, expiresAt: expirationTime });
-        await dispatchSecurityAlert("NEW SYSTEM KEY GENERATED", `**Key Token:** \`${generatedKey}\`\n**Lifespan Allocation:** ${durationHours} Hour(s)\n**Expires On:** ${expirationTime.toUTCString()}`, 10027263);
+        await dispatchSecurityAlert("NEW SYSTEM KEY GENERATED", `**Key Token:** \`${generatedKey}\`\n**Lifespan Allocation:** ${hours} Hour(s)\n**Expires On:** ${expirationTime.toUTCString()}`, 10027263);
         res.json({ success: true, key: newKey });
     } catch (err) {
         res.status(500).json({ success: false, error: "Token minting allocation failure." });
@@ -178,15 +179,10 @@ app.post('/api/admin/keys/blacklist', async (req, res) => {
 });
 
 // ============================================================================
-// 5. STATIC ASSET HOSTING & ROUTE FALLBACKS
+// 5. STATIC ASSET HOSTING
 // ============================================================================
-// This must remain below the API endpoints to stop it from intercepting API calls
+// Located completely below the route logic vectors to isolate files cleanly from API requests
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Fallback catch-all to route to the dashboard interface home page if an unmapped URL is hit
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // ============================================================================
 // 6. ENGINE STARTUP
