@@ -70,21 +70,27 @@
 </div>
 
 <script>
-    // 1. Define Global Configuration
+    // 1. Core Parameter Definition
     const API = "";
 
-    // 2. Define global telemetric retrieval logic
+    // 2. High-Resilience Polling Rendering Engine
     async function fetchKeys() {
         try {
             const res = await fetch(`${API}/api/admin/keys`);
+            if (!res.ok) throw new Error(`Server tracking status fault code response: ${res.status}`);
+            
             const data = await res.json();
             const tbody = document.getElementById('keyTableBody');
             tbody.innerHTML = '';
             
             for (const [key, info] of Object.entries(data)) {
+                // Assert structural values to eliminate string casing reference operations errors
+                const currentStatus = info && info.status ? info.status : "active";
+                const totalExecutions = info && info.executions ? info.executions : 0;
+                const executorMap = info && info.executors ? info.executors : {};
+
                 let execs = [];
-                for (const [execName, count] of Object.entries(info.executors || {})) {
-                    // Revert database safe naming conventions back to valid display formats
+                for (const [execName, count] of Object.entries(executorMap)) {
                     const displayName = execName.replace(/_/g, '.');
                     execs.push(`${displayName} [x${count}]`);
                 }
@@ -92,8 +98,8 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${key}</strong></td>
-                    <td class="status-${info.status}">${info.status.toUpperCase()}</td>
-                    <td>${info.executions}</td>
+                    <td class="status-${currentStatus}">${currentStatus.toUpperCase()}</td>
+                    <td>${totalExecutions}</td>
                     <td><span class="executors-list">${execs.join(', ') || 'No hardware executions captured yet.'}</span></td>
                 `;
                 tbody.appendChild(tr);
@@ -103,7 +109,7 @@
         }
     }
 
-    // 3. Define Action Handlers
+    // 3. Operational Action Modules
     async function createKey() {
         const key = document.getElementById('targetKey').value.trim();
         if(!key) return alert("Key assignment string cannot be blank.");
@@ -151,7 +157,7 @@
         alert("Discord system logging route path saved successfully.");
     }
 
-    // 4. Initialize Polling Routines
+    // 4. Initialization Loops
     setInterval(fetchKeys, 3000);
     fetchKeys();
 </script>
