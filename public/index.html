@@ -3,194 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPECTRE // INTERACTIVE SECURITY OVERSEE MUX</title>
+    <title>SPECTRE // COMPLETE COMMAND CONSOLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Fira Code', monospace; background-color: #060608; }
-        .cyber-panel { background: rgba(11, 11, 15, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(155, 0, 255, 0.15); }
-        .neon-glow:hover { box-shadow: 0 0 15px rgba(155, 0, 255, 0.4); border-color: rgba(155, 0, 255, 0.6); }
-        .matrix-grid { background-image: linear-gradient(rgba(155, 0, 255, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(155, 0, 255, 0.01) 1px, transparent 1px); background-size: 20px 20px; }
+        body { font-family: 'Fira Code', monospace; background-color: #030305; }
+        .cyber-border { border: 1px solid rgba(139, 92, 246, 0.15); }
+        .cyber-panel { background: rgba(8, 8, 12, 0.95); backdrop-filter: blur(16px); }
+        .tab-active { border-color: #8b5cf6; color: #ffffff; background: rgba(139, 92, 246, 0.08); }
+        .matrix-bg { background-image: linear-gradient(rgba(139, 92, 246, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.01) 1px, transparent 1px); background-size: 24px 24px; }
     </style>
 </head>
-<body class="matrix-grid text-gray-300 min-h-screen p-4 md:p-8">
+<body class="matrix-bg text-slate-300 min-h-screen flex flex-col">
 
-    <header class="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-purple-900/30 pb-6 gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-white tracking-widest flex items-center gap-3">
-                <span class="w-3 h-3 bg-purple-600 animate-pulse rounded-full shadow-[0_0_10px_#9b00ff]"></span>
-                SPECTRE // PROFILE MANAGEMENT INTERMEDIARY v2.8
-            </h1>
-        </div>
-        <div id="timestamp-clock" class="text-white font-mono text-sm">00:00:00 PM</div>
-    </header>
-
-    <main class="max-w-7xl mx-auto space-y-6">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="cyber-panel p-5 rounded border-l-4 border-l-purple-600">
-                <span class="text-xs text-purple-400 font-bold block">TOTAL LICENSES ISSUED</span>
-                <span id="m-total" class="text-4xl font-bold text-white mt-1 block">00</span>
-            </div>
-            <div class="cyber-panel p-5 rounded border-l-4 border-l-green-500">
-                <span class="text-xs text-green-400 font-bold block">ACTIVE NET CHANNELS</span>
-                <span id="m-active" class="text-4xl font-bold text-white mt-1 block">00</span>
-            </div>
-            <div class="cyber-panel p-5 rounded border-l-4 border-l-red-500">
-                <span class="text-xs text-red-400 font-bold block">HARD BLACKLISTED IDS</span>
-                <span id="m-black" class="text-4xl font-bold text-white mt-1 block">00</span>
-            </div>
-        </div>
-
-        <div class="cyber-panel p-6 rounded">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="custom-key" placeholder="CUSTOM IDENTITY LABEL TAG" class="bg-black/60 border border-purple-900/50 rounded px-3 py-2 text-xs text-white uppercase outline-none focus:border-purple-500">
-                <input type="number" id="key-hours" placeholder="HOURS ALLOCATION VALUE" class="bg-black/60 border border-purple-900/50 rounded px-3 py-2 text-xs text-white outline-none focus:border-purple-500">
-                <button onclick="mintToken()" class="bg-purple-900/20 hover:bg-purple-600 border border-purple-500/40 text-xs font-bold py-2 rounded transition-all neon-glow text-white">MINT ACCESS CORE</button>
-                <button onclick="purgeExpiredTokens()" class="bg-red-950/20 hover:bg-red-700 border border-red-500/30 text-xs font-bold py-2 rounded transition-all text-white">PURGE RECLAIM EXPIRED</button>
-            </div>
-            <div id="mint-out" class="hidden mt-4 p-3 bg-purple-950/40 border border-purple-500/30 text-xs text-purple-300 rounded font-mono"></div>
-        </div>
-
-        <div class="cyber-panel p-6 rounded">
-            <div class="flex justify-between items-center mb-4 pb-4 border-b border-purple-900/30">
-                <h3 class="text-xs font-bold text-white tracking-widest">[//] SECURE CONTROL MASTER LAYER INDEX</h3>
-                <input type="text" id="search-filter" oninput="renderTable()" placeholder="LOOKUP ACCOUNT..." class="bg-black/60 border border-purple-900/50 rounded px-3 py-1.5 text-xs text-white uppercase outline-none font-mono">
+    <header class="cyber-panel border-b border-violet-950/40 px-6 py-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="relative w-4 h-4">
+                    <span class="absolute inset-0 bg-violet-500 rounded-full animate-ping opacity-70"></span>
+                    <span class="absolute inset-0 bg-violet-600 rounded-full shadow-[0_0_12px_#8b5cf6]"></span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-widest">SPECTRE Core // HQ MUX</h1>
+                    <p class="text-[10px] text-violet-400/70 font-mono tracking-wider">SECURE ENTERPRISE PROFILE TELEMETRY CONSOLE</p>
+                </div>
             </div>
             
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-purple-900/40 text-[10px] text-purple-400 uppercase tracking-wider font-bold">
-                            <th class="pb-3">Identity Context</th>
-                            <th class="pb-3">Licensing Vector</th>
-                            <th class="pb-3">First Activated</th>
-                            <th class="pb-3">Executor Run</th>
-                            <th class="pb-3">Internal Admin Notes Space</th>
-                            <th class="pb-3 text-right">Operations Directives</th>
-                        </tr>
-                    </thead>
-                    <tbody id="key-table-body" class="text-xs font-mono divide-y divide-purple-950/10">
-                        </tbody>
-                </table>
+            <div class="flex bg-black/60 p-1 rounded border border-violet-950/50 gap-1 text-xs">
+                <button onclick="switchViewTab('licenses')" id="tab-licenses" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all tab-active">KEYS_INDEX</button>
+                <button onclick="switchViewTab('blacklist')" id="tab-blacklist" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">HARDWARE_BANS</button>
+                <button onclick="switchViewTab('logs')" id="tab-logs" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">AUDIT_STREAMS</button>
             </div>
         </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-grow space-y-6">
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-violet-500">
+                <span class="text-[10px] text-violet-400 tracking-wider block font-bold">TOTAL TOKENS</span>
+                <span id="stat-total" class="text-3xl font-bold text-white mt-1 block">00</span>
+            </div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-emerald-500">
+                <span class="text-[10px] text-emerald-400 tracking-wider block font-bold">ACTIVE CHANNELS</span>
+                <span id="stat-active" class="text-3xl font-bold text-white mt-1 block">00</span>
+            </div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-amber-500">
+                <span class="text-[10px] text-amber-400 tracking-wider block font-bold">REVOKED TOKENS</span>
+                <span id="stat-revoked" class="text-3xl font-bold text-white mt-1 block">00</span>
+            </div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-rose-600">
+                <span class="text-[10px] text-rose-400 tracking-wider block font-bold">HWID BLOCKS</span>
+                <span id="stat-hwid" class="text-3xl font-bold text-white mt-1 block">00</span>
+            </div>
+        </div>
+
+        <div id="view-licenses" class="space-y-6">
+            <div class="cyber-panel cyber-border p-4 rounded grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <div class="md:col-span-4">
+                    <input type="text" id="custom-key" placeholder="TAG VALUE (OPTIONAL)..." class="w-full bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-white uppercase outline-none focus:border-violet-500">
+                </div>
+                <div class="md:col-span-3">
+                    <input type="number" id="key-hours" placeholder="HOURS RUN VALUE..." class="w-full bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-white outline-none focus:border-violet-500">
+                </div>
+                <div class="md:col-span-3">
+                    <button onclick="mintToken()" class="w-full bg-violet-900/30 hover:bg-violet-600 border border-violet-500/40 text-xs font-bold py-2 rounded text-white transition-all">MINT TOKEN CORE</button>
+                </div>
+                <div class="md:col-span-2">
+                    <button onclick="purgeExpiredTokens()" class="w-full bg-rose-950/20 hover:bg-rose-700 border border-rose-500/30 text-xs font-bold py-2 rounded text-rose-300 transition-all">PURGE OLD</button>
+                </div>
+            </div>
+
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/40 border-b border-violet-950/40 flex justify-between items-center">
+                    <span class="text-xs font-bold text-white tracking-widest">// ACTIVE LICENSE STREAM REGISTER</span>
+                    <input type="text" id="search-filter" oninput="renderLicenseTable()" placeholder="SEARCH PROFILE OR KEY..." class="bg-black/60 border border-violet-950/50 rounded px-3 py-1 text-xs text-white uppercase outline-none focus:border-violet-500">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/20 text-[10px] text-violet-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
+                                <th class="p-4">User Frame Profile</th>
+                                <th class="p-4">Licensing Core Vector</th>
+                                <th class="p-4">Initialization Time</th>
+                                <th class="p-4">Target Host Pipeline</th>
+                                <th class="p-4">Admin Internal Account Sync CRM Notes</th>
+                                <th class="p-4 text-right">Operations Directives</th>
+                            </tr>
+                        </thead>
+                        <tbody id="license-table-rows" class="text-xs font-mono divide-y divide-violet-950/10"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-blacklist" class="hidden space-y-4">
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/40 border-b border-violet-950/40">
+                    <span class="text-xs font-bold text-rose-400 tracking-widest">// HARDLOCKED HARDWARE & SIGNATURE BAN MATRIX</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/20 text-[10px] text-rose-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
+                                <th class="p-4">Profile Avatar Block</th>
+                                <th class="p-4">Roblox System ID</th>
+                                <th class="p-4">Assigned Host Signature Hardware (HWID)</th>
+                                <th class="p-4">Enforcement Trigger Cause</th>
+                                <th class="p-4">Flag Incident Timestamp</th>
+                                <th class="p-4 text-right">Security Operations Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklist-table-rows" class="text-xs font-mono divide-y divide-violet-950/10"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-logs" class="hidden space-y-4">
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/40 border-b border-violet-950/40 flex justify-between items-center">
+                    <span class="text-xs font-bold text-violet-400 tracking-widest">// NATIVE SECURITY EVENT REALTIME RECORD STREAMS</span>
+                    <button onclick="clearAuditDatabaseLogs()" class="text-[10px] bg-rose-950/30 border border-rose-500/40 hover:bg-rose-800 px-3 py-1 rounded text-white font-bold transition-all">FLUSH DATA STREAMS</button>
+                </div>
+                <div class="p-4 max-h-[500px] overflow-y-auto space-y-2 text-xs" id="logs-terminal-stream"></div>
+            </div>
+        </div>
+
     </main>
 
     <script>
-        let cachedKeys = [];
+        let serverTarget = window.location.origin;
+        let localKeysCache = [];
+        let localBansCache = [];
 
-        async function runMatrixSync() {
-            try {
-                const response = await fetch(window.location.origin + '/api/admin/metrics');
-                if (!response.ok) return;
-                const data = await response.json();
-                cachedKeys = data.keysList || [];
-                
-                document.getElementById('m-total').innerText = String(data.totalKeys || 0).padStart(2, '0');
-                document.getElementById('m-active').innerText = String(data.activeKeys || 0).padStart(2, '0');
-                document.getElementById('m-black').innerText = String(data.blacklistedKeys || 0).padStart(2, '0');
-                
-                renderTable();
-            } catch(e) { console.error("Database Connection Fault Layer:", e); }
+        function switchViewTab(tabId) {
+            ['licenses', 'blacklist', 'logs'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('tab-active');
         }
 
-        function renderTable() {
-            const filter = document.getElementById('search-filter').value.toUpperCase();
-            const body = document.getElementById('key-table-body');
-            body.innerHTML = '';
+        async function pullCloudDataRegistry() {
+            try {
+                // Fetch keys and baseline metric payloads
+                const metricsRes = await fetch(`${serverTarget}/api/admin/metrics`);
+                const metrics = await metricsRes.json();
+                localKeysCache = metrics.keysList || [];
 
-            cachedKeys.forEach(item => {
+                // Fetch dedicated blacklist allocations
+                const blacklistRes = await fetch(`${serverTarget}/api/admin/blacklist/all`);
+                const blacklistData = await blacklistRes.json();
+                localBansCache = blacklistData.blacklist || [];
+
+                // Render metrics widgets
+                document.getElementById('stat-total').innerText = String(metrics.totalKeys || 0).padStart(2, '0');
+                document.getElementById('stat-active').innerText = String(metrics.activeKeys || 0).padStart(2, '0');
+                document.getElementById('stat-revoked').innerText = String(metrics.blacklistedKeys || 0).padStart(2, '0');
+                document.getElementById('stat-hwid').innerText = String(localBansCache.length || 0).padStart(2, '0');
+
+                renderLicenseTable();
+                renderBlacklistTable();
+                renderTerminalLogs(metrics.recentLogs || []);
+            } catch (err) {
+                console.error("Critical Cloud Link Disconnection Sync Fault:", err);
+            }
+        }
+
+        function renderLicenseTable() {
+            const filter = document.getElementById('search-filter').value.toUpperCase();
+            const container = document.getElementById('license-table-rows');
+            container.innerHTML = '';
+
+            localKeysCache.forEach(item => {
                 if (filter && !item.key.toUpperCase().includes(filter) && !(item.assignedUser && item.assignedUser.toUpperCase().includes(filter))) return;
 
-                const activatedDisplay = item.activatedAt ? new Date(item.activatedAt).toLocaleString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "—";
+                const activatedDisplay = item.activatedAt ? new Date(item.activatedAt).toLocaleString() : "—";
                 const badge = item.isBlacklisted 
-                    ? `<span class="text-red-500 font-bold border border-red-900/50 px-1.5 py-0.5 rounded text-[10px] bg-red-950/20">BLOCKED</span>`
-                    : (!item.assignedUser ? `<span class="text-yellow-500 font-bold border border-yellow-900/40 px-1.5 py-0.5 rounded text-[10px] bg-yellow-950/10">UNUSED</span>` : `<span class="text-green-400 font-bold border border-green-900/40 px-1.5 py-0.5 rounded text-[10px] bg-green-950/10">BOUND</span>`);
+                    ? `<span class="text-rose-500 font-bold border border-rose-900/40 px-2 py-0.5 rounded text-[10px] bg-rose-950/20">BLOCKED</span>`
+                    : (!item.assignedUser ? `<span class="text-amber-500 font-bold border border-amber-900/30 px-2 py-0.5 rounded text-[10px] bg-amber-950/10">VACANT</span>` : `<span class="text-emerald-400 font-bold border border-emerald-900/30 px-2 py-0.5 rounded text-[10px] bg-emerald-950/10">LINKED</span>`);
 
-                const action = !item.isBlacklisted
-                    ? `<button onclick="terminateLicense('${item.key}')" class="text-[10px] text-red-400 hover:text-white border border-red-500/30 px-2 py-0.5 rounded">TERMINATE</button>`
-                    : `<button onclick="unblacklistLicense('${item.key}')" class="text-[10px] text-purple-400 hover:text-white border border-purple-500/30 px-2 py-0.5 rounded">RESTORE</button>`;
+                const toggleAction = !item.isBlacklisted
+                    ? `<button onclick="revokeLicenseToken('${item.key}')" class="text-[10px] font-bold text-rose-400 hover:text-white bg-rose-950/10 border border-rose-500/20 hover:bg-rose-700 px-2 py-1 rounded transition-all">REVOKE</button>`
+                    : `<button onclick="restoreLicenseToken('${item.key}')" class="text-[10px] font-bold text-violet-400 hover:text-white bg-violet-950/10 border border-violet-500/20 hover:bg-violet-600 px-2 py-1 rounded transition-all">CLEANSE</button>`;
 
-                body.innerHTML += `
-                    <tr class="hover:bg-purple-950/10 border-b border-purple-900/5">
-                        <td class="py-3 flex items-center gap-3">
-                            <img src="${item.avatarUrl}" class="w-8 h-8 rounded-full border border-purple-500/40 bg-black/40 shadow-sm" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
+                container.innerHTML += `
+                    <tr class="hover:bg-violet-950/5 border-b border-violet-950/10">
+                        <td class="p-4 flex items-center gap-3">
+                            <img src="${item.avatarUrl}" class="w-8 h-8 rounded-full border border-violet-500/20 bg-black/50" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
                             <div>
                                 <div class="text-white font-bold">${item.assignedUser || '—'}</div>
-                                <div class="text-[10px] text-gray-500 font-mono">${item.assignedUserId || 'UNASSIGNED'}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${item.assignedUserId || 'UNBOUND'}</div>
                             </div>
                         </td>
-                        <td class="py-3 select-all text-purple-300 font-medium">${item.key}</td>
-                        <td class="py-3 text-gray-400">${activatedDisplay}</td>
-                        <td class="py-3 text-purple-400/80 font-semibold">${item.assignedExecutor || '—'}</td>
-                        <td class="py-3">
+                        <td class="p-4 font-bold tracking-wider select-all text-violet-300">${item.key}</td>
+                        <td class="p-4 text-slate-400">${activatedDisplay}</td>
+                        <td class="p-4 text-violet-400/80 font-medium">${item.assignedExecutor || '—'}</td>
+                        <td class="p-4">
                             ${item.assignedUserId ? `
-                                <input type="text" value="${item.adminNotes || ''}" onchange="saveNotes('${item.assignedUserId}', this.value)" placeholder="Click to add note..." class="w-full max-w-[200px] bg-black/40 border border-purple-900/30 text-[11px] px-2 py-1 text-gray-300 rounded outline-none focus:border-purple-500 font-mono">
-                            ` : '<span class="text-gray-600 text-[11px]">Bind key to edit notes</span>'}
+                                <input type="text" value="${item.adminNotes || ''}" onchange="submitProfileCrmNotes('${item.assignedUserId}', this.value)" placeholder="Add administrative sync logs..." class="w-full max-w-[240px] bg-black/50 border border-violet-950/40 text-[11px] px-2 py-1 text-slate-300 rounded outline-none focus:border-violet-500">
+                            ` : '<span class="text-slate-600 text-[10px] italic">Awaiting profile registration...</span>'}
                         </td>
-                        <td class="py-3 text-right">
-                            <div class="flex justify-end gap-2 items-center">
-                                ${badge} ${action}
-                            </div>
+                        <td class="p-4 text-right">
+                            <div class="flex justify-end gap-2 items-center">${badge} ${toggleAction}</div>
                         </td>
                     </tr>
                 `;
             });
-            document.getElementById('timestamp-clock').innerText = new Date().toLocaleTimeString();
         }
 
-        async function saveNotes(robloxUserId, notes) {
-            await fetch(window.location.origin + '/api/admin/profile/notes', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ robloxUserId, notes })
+        function renderBlacklistTable() {
+            const container = document.getElementById('blacklist-table-rows');
+            container.innerHTML = '';
+
+            if (localBansCache.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-600 font-mono tracking-widest">NO GLOBAL HWID ENFORCEMENT RECORDS ON FILE</td></tr>`;
+                return;
+            }
+
+            localBansCache.forEach(ban => {
+                const headshotUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${ban.robloxUserId}&width=150&height=150&format=png`;
+                container.innerHTML += `
+                    <tr class="hover:bg-rose-950/5 border-b border-violet-950/10">
+                        <td class="p-4">
+                            <img src="${headshotUrl}" class="w-8 h-8 rounded-full border border-rose-500/30 bg-black/40" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
+                        </td>
+                        <td class="p-4 font-bold text-white select-all">${ban.robloxUserId}</td>
+                        <td class="p-4 text-slate-400 select-all font-mono text-[11px] max-w-[150px] truncate" title="${ban.hwid}">${ban.hwid}</td>
+                        <td class="p-4 text-rose-400/90 font-medium">${ban.reason}</td>
+                        <td class="p-4 text-slate-500">${new Date(ban.flaggedAt).toLocaleString()}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="liftShadowEnforcementBan('${ban.robloxUserId}')" class="text-[10px] font-bold text-emerald-400 hover:text-white border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-600 px-3 py-1 rounded transition-all">LIFT_BAN</button>
+                        </td>
+                    </tr>
+                `;
             });
-            runMatrixSync();
+        }
+
+        function renderTerminalLogs(logs) {
+            const stream = document.getElementById('logs-terminal-stream');
+            stream.innerHTML = '';
+            
+            if (logs.length === 0) {
+                stream.innerHTML = `<div class="text-slate-600 italic">// Awaiting stream telemetry pipes...</div>`;
+                return;
+            }
+
+            logs.forEach(log => {
+                let color = "text-violet-400";
+                if (log.event.includes("TERMINATED") || log.event.includes("BLACK") || log.event.includes("EVADE")) color = "text-rose-500 font-bold";
+                if (log.event.includes("INITIALIZATION") || log.event.includes("UNBAN")) color = "text-emerald-400 font-bold";
+
+                stream.innerHTML += `
+                    <div class="p-2 bg-black/40 rounded border border-violet-950/20 flex flex-col md:flex-row md:justify-between font-mono gap-1">
+                        <div>
+                            <span class="text-slate-500">[${new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span class="${color}">[${log.event}]</span>
+                            <span class="text-white">User: ${log.username || '—'}</span> | 
+                            <span class="text-slate-400 text-[11px]">Key: ${log.key}</span>
+                        </div>
+                        <div class="text-slate-500 text-[11px]">HWID Trace: ${log.hwid || '—'} [${log.status}]</div>
+                    </div>
+                `;
+            });
         }
 
         async function mintToken() {
             const customKey = document.getElementById('custom-key').value.trim();
             const durationHours = document.getElementById('key-hours').value.trim();
-            const res = await (await fetch(window.location.origin + '/api/admin/keys/create', {
+            await fetch(`${serverTarget}/api/admin/keys/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ customKey: customKey || null, durationHours: durationHours || "24" })
-            })).json();
-            if(res.success) {
-                document.getElementById('mint-out').innerHTML = `MINTED CODE VECTOR: <strong class="text-white select-all">${res.key.key}</strong>`;
-                document.getElementById('mint-out').classList.remove('hidden');
-                runMatrixSync();
-            }
+            });
+            document.getElementById('custom-key').value = '';
+            document.getElementById('key-hours').value = '';
+            pullCloudDataRegistry();
         }
 
-        async function terminateLicense(key) {
-            const reason = prompt("State operational blacklist cause context:");
-            if (reason === null) return;
-            await fetch(window.location.origin + '/api/admin/keys/blacklist', {
+        async function submitProfileCrmNotes(robloxUserId, notes) {
+            await fetch(`${serverTarget}/api/admin/profile/notes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key, reason: reason || "Manual System Administrator Action Overrule" })
+                body: JSON.stringify({ robloxUserId, notes })
             });
-            runMatrixSync();
+            pullCloudDataRegistry();
         }
 
-        async function unblacklistLicense(key) {
-            if(!confirm("Restore license token access paths?")) return;
-            await fetch(window.location.origin + '/api/admin/keys/restore', {
+        async function revokeLicenseToken(key) {
+            const reason = prompt("Specify license revocation protocol trigger context:");
+            if (reason === null) return;
+            await fetch(`${serverTarget}/api/admin/keys/blacklist`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key, reason: reason || "Manual System Admin Hard-ban Override" })
+            });
+            pullCloudDataRegistry();
+        }
+
+        async function restoreLicenseToken(key) {
+            if (!confirm("Execute full database restore protocols for this key token?")) return;
+            await fetch(`${serverTarget}/api/admin/keys/restore`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key })
             });
-            runMatrixSync();
+            pullCloudDataRegistry();
+        }
+
+        async function liftShadowEnforcementBan(robloxUserId) {
+            if (!confirm(`Purge profile ${robloxUserId} and matching hardware signatures from system wide shadow enforcement?`)) return;
+            await fetch(`${serverTarget}/api/admin/blacklist/remove/${robloxUserId}`, { method: "DELETE" });
+            pullCloudDataRegistry();
         }
 
         async function purgeExpiredTokens() {
-            await fetch(window.location.origin + '/api/admin/keys/purge-expired', { method: "POST" });
-            runMatrixSync();
+            await fetch(`${serverTarget}/api/admin/keys/purge-expired`, { method: "POST" });
+            pullCloudDataRegistry();
         }
 
-        setInterval(runMatrixSync, 6000);
-        window.onload = runMatrixSync;
+        async function clearAuditDatabaseLogs() {
+            if (!confirm("Scrub all operational terminal trace history entries completely?")) return;
+            await fetch(`${serverTarget}/api/admin/logs/clear`, { method: "POST" });
+            pullCloudDataRegistry();
+        }
+
+        setInterval(pullCloudDataRegistry, 5000);
+        window.onload = pullCloudDataRegistry;
     </script>
 </body>
 </html>
