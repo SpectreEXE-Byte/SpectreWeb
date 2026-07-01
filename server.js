@@ -30,14 +30,9 @@ const keySchema = new mongoose.Schema({
     assignedHWID: { type: String, default: "" },
     assignedExecutor: { type: String, default: "" },
     activatedAt: { type: Date },
-    expiresAt: { type: Date, required: true },
-    createdAt: { type: Date, default: Date.now }
+    expiresAt: { type: Date, required: true }
 });
-
-// Structural compound optimization indexes
-keySchema.index({ assignedUserId: 1, isBlacklisted: 1 });
-keySchema.index({ key: 1 }, { unique: true });
-
+keySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Automates pruning if needed
 const Key = mongoose.model('Key', keySchema);
 
 const userProfileSchema = new mongoose.Schema({
@@ -90,7 +85,7 @@ async function dispatchSecurityAlert(title, description, color = 10027263) {
 }
 
 function fetchRobloxAvatarUrl(userId) {
-    if (!userId || userId === "0" || userId === "—" || userId === "UNBOUND") {
+    if (!userId || userId === "0" || userId === "—") {
         return "https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png";
     }
     return `https://www.roblox.com/headshot-thumbnail/image?userId=${userId}&width=150&height=150&format=png`;
@@ -107,13 +102,11 @@ app.post('/api/verify', async (req, res) => {
     }
 
     try {
-        // PROTECTION SHIELD: Verify if identity elements match active blacklists
         const shadowMatch = await ShadowBlacklist.findOne({
             $or: [{ robloxUserId: String(robloxUserId) }, { hwid: hwid }]
         });
 
         if (shadowMatch) {
-            // Automatically burn clean key token they attempted to use
             await Key.findOneAndUpdate({ key }, { 
                 isBlacklisted: true, 
                 blacklistReason: `SHADOW EXCLUSION CODES TRIGGERED: Tied to ban register (${shadowMatch.reason})` 
@@ -130,18 +123,12 @@ app.post('/api/verify', async (req, res) => {
         if (!targetKey) return res.status(404).json({ success: false, message: "License record untracked." });
         if (targetKey.isBlacklisted) return res.status(403).json({ success: false, message: `SUSPENDED: ${targetKey.blacklistReason}` });
 
-        if (new Date() > targetKey.expiresAt) {
-             return res.status(403).json({ success: false, message: "Licensing temporal frame expired." });
-        }
-
-        // ACCOUNT SYNC: Update profile metadata history structures
         await UserProfile.findOneAndUpdate(
             { robloxUserId: String(robloxUserId) },
             { username, lastSeenHWID: hwid, lastSeenExecutor: executor, updatedAt: new Date() },
             { upsert: true, new: true }
         );
 
-        // CONDITIONAL ASSIGNMENT: Bind unused clean key tokens automatically upon first link
         if (!targetKey.assignedUser && !targetKey.assignedHWID) {
             targetKey.assignedUser = username;
             targetKey.assignedUserId = String(robloxUserId);
@@ -151,10 +138,9 @@ app.post('/api/verify', async (req, res) => {
             await targetKey.save();
 
             await AuditLog.create({ event: "INITIALIZATION", key, username, hwid, status: "SUCCESS" });
-            return res.status(200).json({ success: true, message: "License successfully registered and bound to profile." });
+            return res.status(200).json({ success: true, message: "License successfully registered." });
         }
 
-        // COMPLIANCE POLICING ENFORCEMENT CONSTRAINTS
         let infractions = [];
         if (targetKey.assignedUserId !== String(robloxUserId)) infractions.push(`User account mismatch (${targetKey.assignedUser} vs ${username})`);
         if (targetKey.assignedHWID !== hwid) infractions.push("Hardware variance token split");
@@ -165,7 +151,6 @@ app.post('/api/verify', async (req, res) => {
             targetKey.blacklistReason = `Automated Security Lockdown: ${reason}`;
             await targetKey.save();
 
-            // Establish shadow-ban signature locks across the platform database arrays
             await ShadowBlacklist.findOneAndUpdate(
                 { robloxUserId: String(robloxUserId) },
                 { robloxUserId: String(robloxUserId), hwid, reason: `Compromised footprint context usage: ${reason}` },
@@ -187,12 +172,11 @@ app.post('/api/verify', async (req, res) => {
 // ADMINISTRATION CONTROL INTERACTION CHANNELS
 // ============================================================================
 
-// Fetch collective dashboard metrics and extended keys roster data views
 app.get('/api/admin/metrics', async (req, res) => {
     try {
         const keys = await Key.find().sort({ createdAt: -1 }).lean();
         const profiles = await UserProfile.find().lean();
-        const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(18).lean();
+        const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(100).lean();
 
         const extendedKeysList = keys.map(k => {
             const profile = profiles.find(p => p.robloxUserId === k.assignedUserId);
@@ -204,19 +188,72 @@ app.get('/api/admin/metrics', async (req, res) => {
             };
         });
 
+        // Generate distribution rates over time dynamically for Analytics Chart
+        const hourlyTimeline = {};
+        logs.forEach(l => {
+            if(l.timestamp) {
+                const hourMarker = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                hourlyTimeline[hourMarker] = (hourlyTimeline[hourMarker] || 0) + 1;
+            }
+        });
+
         return res.status(200).json({
             totalKeys: keys.length,
             activeKeys: keys.filter(k => !k.isBlacklisted).length,
             blacklistedKeys: keys.filter(k => k.isBlacklisted).length,
-            recentLogs: logs,
-            keysList: extendedKeysList
+            recentLogs: logs.slice(0, 20),
+            keysList: extendedKeysList,
+            chartTimeline: Object.keys(hourlyTimeline).slice(-7),
+            chartData: Object.values(hourlyTimeline).slice(-7)
         });
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// Create new access tokens
+// PROFILE DEEP DIVE: Fetch all details, metrics, logs, historical context, and bans on profile focus
+app.get('/api/admin/profile/deep-dive/:robloxUserId', async (req, res) => {
+    try {
+        const targetId = String(req.params.robloxUserId);
+
+        const [profile, activeKeys, shadowBan] = await Promise.all([
+            UserProfile.findOne({ robloxUserId: targetId }).lean(),
+            Key.find({ assignedUserId: targetId }).sort({ expiresAt: -1 }).lean(),
+            ShadowBlacklist.findOne({ robloxUserId: targetId }).lean()
+        ]);
+
+        const associatedKeyStrings = activeKeys.map(k => k.key);
+        const logSearchConditions = [{ key: { $in: associatedKeyStrings } }];
+        if (profile && profile.username) {
+            logSearchConditions.push({ username: profile.username });
+        }
+
+        const comprehensiveLogs = await AuditLog.find({ $or: logSearchConditions })
+            .sort({ timestamp: -1 })
+            .lean();
+
+        const statistics = {
+            totalHandshakes: comprehensiveLogs.filter(l => l.event === "HANDSHAKE" && l.status === "PASS").length,
+            totalInitializations: comprehensiveLogs.filter(l => l.event === "INITIALIZATION").length,
+            totalInfractions: comprehensiveLogs.filter(l => l.event === "BLACKLIST_AUTO" || l.event === "SHADOW_EVADE_BLOCK").length
+        };
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                identity: profile || { robloxUserId: targetId, username: "Unknown / Unsaved" },
+                avatarUrl: fetchRobloxAvatarUrl(targetId),
+                banStatus: shadowBan ? { active: true, reason: shadowBan.reason, flaggedAt: shadowBan.flaggedAt } : { active: false },
+                associatedKeys: activeKeys,
+                activityLogs: comprehensiveLogs,
+                statistics
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/admin/keys/create', async (req, res) => {
     try {
         const { customKey, durationHours } = req.body;
@@ -226,31 +263,21 @@ app.post('/api/admin/keys/create', async (req, res) => {
 
         const newKey = await Key.create({ key: generatedKey, expiresAt: expirationTime });
         return res.status(200).json({ success: true, key: newKey });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Save persistent metadata/notes tracking content parameters against active profiles
 app.post('/api/admin/profile/notes', async (req, res) => {
     try {
         const { robloxUserId, notes } = req.body;
-        await UserProfile.findOneAndUpdate(
-            { robloxUserId: String(robloxUserId) },
-            { adminNotes: notes },
-            { upsert: true }
-        );
+        await UserProfile.findOneAndUpdate({ robloxUserId: String(robloxUserId) }, { adminNotes: notes }, { upsert: true });
         return res.status(200).json({ success: true, message: "Account note synchronized." });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Revoke token and append signature structures directly to structural blacklists
 app.post('/api/admin/keys/blacklist', async (req, res) => {
     try {
         const { key, reason } = req.body;
-        const target = await Key.findOneAndUpdate({ key }, { isBlacklisted: true, blacklistReason: reason });
+        const target = await Key.findOneAndUpdate({ key }, { isBlacklisted: true, blacklistReason: reason }, { new: true });
         if (!target) return res.status(404).json({ success: false, error: "License key untracked." });
 
         if (target.assignedUserId) {
@@ -259,99 +286,53 @@ app.post('/api/admin/keys/blacklist', async (req, res) => {
                 { robloxUserId: target.assignedUserId, hwid: target.assignedHWID || "MANUAL_BAN", reason: reason || "Manual System Administrator Action Overrule" },
                 { upsert: true }
             );
-            await AuditLog.create({
-                event: "MANUAL_BAN",
-                key: key,
-                username: target.assignedUser || `UID: ${target.assignedUserId}`,
-                hwid: target.assignedHWID || "N/A",
-                status: "ENFORCED"
-            });
         }
-        return res.status(200).json({ success: true, message: "Token suspended and profiles shadow locked." });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+        return res.status(200).json({ success: true, message: "Token suspended." });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Clear token ban histories and drop corresponding signature restrictions
 app.post('/api/admin/keys/restore', async (req, res) => {
     try {
         const { key } = req.body;
-        const target = await Key.findOne({ key });
-        if (!target) return res.status(404).json({ success: false, error: "Key not found." });
+        const target = await Key.findOneAndUpdate({ key }, { 
+            isBlacklisted: false, blacklistReason: "", assignedUser: "", assignedUserId: "", assignedHWID: "", assignedExecutor: "", activatedAt: null 
+        }, { new: true });
 
-        if (target.assignedUserId) {
+        if (target && target.assignedUserId) {
             await ShadowBlacklist.deleteOne({ robloxUserId: target.assignedUserId });
         }
-
-        await Key.findOneAndUpdate({ key }, { 
-            isBlacklisted: false, 
-            blacklistReason: "", 
-            assignedUser: "", 
-            assignedUserId: "", 
-            assignedHWID: "", 
-            assignedExecutor: "", 
-            activatedAt: null 
-        });
-
         return res.status(200).json({ success: true, message: "Token configuration footprint cleansed." });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Pull down comprehensive inventory containing every registered shadow-ban allocation
 app.get('/api/admin/blacklist/all', async (req, res) => {
     try {
         const bannedProfiles = await ShadowBlacklist.find().sort({ flaggedAt: -1 }).lean();
         return res.status(200).json({ success: true, blacklist: bannedProfiles });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Delete individual target hardware identities from blacklists (Lift Ban)
 app.delete('/api/admin/blacklist/remove/:id', async (req, res) => {
     try {
         const targetId = req.params.id;
-        const result = await ShadowBlacklist.deleteOne({ robloxUserId: String(targetId) });
-        
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ success: false, error: "Profile trace record mismatch." });
-        }
-
-        await AuditLog.create({ 
-            event: "GLOBAL_UNBAN", 
-            key: "SYSTEM", 
-            username: `UID: ${targetId}`, 
-            hwid: "RESTORATION", 
-            status: "CLEARED" 
-        });
-
-        await dispatchSecurityAlert("GLOBAL FOOTPRINT RESTORED", `**Roblox User Identifier:** \`${targetId}\` has been removed from system enforcement arrays.`, 65280);
-
+        await ShadowBlacklist.deleteOne({ robloxUserId: String(targetId) });
         return res.status(200).json({ success: true, message: "Enforcement parameters purged successfully." });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// Housekeeping utility endpoints
 app.post('/api/admin/keys/purge-expired', async (req, res) => {
     try {
-        const output = await Key.deleteMany({ expiresAt: { $lt: new Date() } });
-        return res.status(200).json({ success: true, message: `Purged ${output.deletedCount} old expired keys.` });
-    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+        await Key.deleteMany({ expiresAt: { $lt: new Date() } });
+        return res.status(200).json({ success: true });
+    } catch (err) { return res.status(500).json({ success: false }); }
 });
 
 app.post('/api/admin/logs/clear', async (req, res) => {
     try {
         await AuditLog.deleteMany({});
-        return res.status(200).json({ success: true, message: "Audit logs streams cleared." });
-    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+        return res.status(200).json({ success: true });
+    } catch (err) { return res.status(500).json({ success: false }); }
 });
 
-// Serve frontend layout interface
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.listen(PORT, () => console.log(`>>> Spectre Network Engine online and listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`>>> Spectre Network Engine online on port ${PORT}`));
