@@ -207,6 +207,52 @@ app.get('/api/admin/metrics', async (req, res) => {
     }
 });
 
+// PROFILE DEEP DIVE: Fetch all relative metrics, logs, historical context, and bans on profile focus
+app.get('/api/admin/profile/deep-dive/:robloxUserId', async (req, res) => {
+    try {
+        const targetId = String(req.params.robloxUserId);
+
+        // Run concurrent database queries to minimize I/O blockage points
+        const [profile, activeKeys, shadowBan] = await Promise.all([
+            UserProfile.findOne({ robloxUserId: targetId }).lean(),
+            Key.find({ assignedUserId: targetId }).sort({ expiresAt: -1 }).lean(),
+            ShadowBlacklist.findOne({ robloxUserId: targetId }).lean()
+        ]);
+
+        // Construct search logic to filter log telemetry by user name handles and associated keys strings
+        const associatedKeyStrings = activeKeys.map(k => k.key);
+        const logSearchConditions = [{ key: { $in: associatedKeyStrings } }];
+        if (profile && profile.username) {
+            logSearchConditions.push({ username: profile.username });
+        }
+
+        const comprehensiveLogs = await AuditLog.find({ $or: logSearchConditions })
+            .sort({ timestamp: -1 })
+            .lean();
+
+        // Calculate interaction statistics dynamically
+        const statistics = {
+            totalHandshakes: comprehensiveLogs.filter(l => l.event === "HANDSHAKE" && l.status === "PASS").length,
+            totalInitializations: comprehensiveLogs.filter(l => l.event === "INITIALIZATION").length,
+            totalInfractions: comprehensiveLogs.filter(l => l.event === "BLACKLIST_AUTO" || l.event === "SHADOW_EVADE_BLOCK").length
+        };
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                identity: profile || { robloxUserId: targetId, username: "Unknown / Unsaved" },
+                avatarUrl: fetchRobloxAvatarUrl(targetId),
+                banStatus: shadowBan ? { active: true, reason: shadowBan.reason, flaggedAt: shadowBan.flaggedAt } : { active: false },
+                associatedKeys: activeKeys,
+                activityLogs: comprehensiveLogs,
+                statistics
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Create new access tokens
 app.post('/api/admin/keys/create', async (req, res) => {
     try {
