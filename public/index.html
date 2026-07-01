@@ -5,43 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPECTRE // COMPLETE COMMAND CONSOLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        .light-theme { background-color: #f4f4f5; color: #18181b; }
-        .light-theme .cyber-panel { background: rgba(255, 255, 255, 0.9); border-color: #e4e4e7; color: #18181b; }
-        .light-theme header { background: #ffffff; border-color: #e4e4e7; }
-        .light-theme input, .light-theme select { background: #f4f4f5 !important; border-color: #e4e4e7 !important; color: #18181b !important; }
-        .light-theme .text-white { color: #09090b !important; }
-        .light-theme .text-slate-300 { color: #27272a !important; }
-        .light-theme .text-slate-400 { color: #3f3f46 !important; }
-        .light-theme .text-violet-300 { color: #6d28d9 !important; }
-
-        .dark-theme { background-color: #030305; color: #383838; }
-        .dark-theme .cyber-panel { background: rgba(8, 8, 12, 0.95); border-color: rgba(139, 92, 246, 0.15); }
-        
-        body { font-family: 'Fira Code', monospace; transition: background 0.3s, color 0.3s; }
+        body { font-family: 'Fira Code', monospace; background-color: #030305; }
         .cyber-border { border: 1px solid rgba(139, 92, 246, 0.15); }
+        .cyber-panel { background: rgba(8, 8, 12, 0.95); backdrop-filter: blur(16px); }
         .tab-active { border-color: #8b5cf6; color: #ffffff; background: rgba(139, 92, 246, 0.08); }
         .matrix-bg { background-image: linear-gradient(rgba(139, 92, 246, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.01) 1px, transparent 1px); background-size: 24px 24px; }
     </style>
 </head>
-<body class="matrix-bg dark-theme text-slate-300 min-h-screen flex flex-col">
+<body class="matrix-bg text-slate-300 min-h-screen flex flex-col">
 
-    <div id="notification-toast-area" class="fixed top-5 right-5 z-50 space-y-3 pointer-events-none"></div>
-
-    <div id="auth-modal-screen" class="fixed inset-0 bg-black/80 backdrop-filter blur-md z-50 flex items-center justify-center">
-        <div class="bg-zinc-950 border border-zinc-800 p-8 rounded border-l-4 border-l-violet-600 w-full max-w-sm space-y-4">
-            <h2 class="text-sm font-bold text-white tracking-wider text-center font-mono">// SPECTRE SECURE GATEWAY</h2>
-            <input type="text" id="login-user" placeholder="USERNAME HANDLE..." class="w-full bg-black border border-violet-950/60 p-3 rounded text-xs text-white outline-none font-mono focus:border-violet-500">
-            <input type="password" id="login-pass" placeholder="SECURITY CORE PASS..." class="w-full bg-black border border-violet-950/60 p-3 rounded text-xs text-white outline-none font-mono focus:border-violet-500">
-            <button onclick="attemptAuthenticationTokenExchange()" class="w-full bg-violet-900/40 hover:bg-violet-700 border border-violet-500 text-white py-3 rounded text-xs font-bold transition-all tracking-widest">ESTABLISH LINK</button>
-        </div>
-    </div>
-
-    <header class="cyber-panel border-b border-violet-950/40 px-6 py-4 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+    <header class="cyber-panel border-b border-violet-950/40 px-6 py-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
                 <div class="relative w-4 h-4">
                     <span class="absolute inset-0 bg-violet-500 rounded-full animate-ping opacity-70"></span>
@@ -49,20 +25,14 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-widest">SPECTRE Core // HQ MUX</h1>
-                    <p id="role-clearance-badge" class="text-[10px] text-violet-400/70 font-mono tracking-wider">CLEARANCE: AWAITING_MAPPED_LINK</p>
+                    <p class="text-[10px] text-violet-400/70 font-mono tracking-wider">SECURE ENTERPRISE PROFILE TELEMETRY CONSOLE</p>
                 </div>
             </div>
             
-            <div class="flex flex-wrap bg-black/60 p-1 rounded border border-violet-950/50 gap-1 text-xs">
-                <button onclick="switchViewTab('dashboard')" id="tab-dashboard" class="px-3 py-1.5 rounded text-slate-400 font-medium transition-all tab-active">ANALYTICS_MATRIX</button>
-                <button onclick="switchViewTab('licenses')" id="tab-licenses" class="px-3 py-1.5 rounded text-slate-400 font-medium transition-all">KEYS_INDEX</button>
-                <button onclick="switchViewTab('search')" id="tab-search" class="px-3 py-1.5 rounded text-slate-400 font-medium transition-all">AUDIT_STREAMS</button>
-                <button onclick="switchViewTab('profile')" id="tab-profile" class="px-3 py-1.5 rounded text-slate-400 font-medium transition-all">PROFILE_DEEP_DIVE</button>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button onclick="toggleVisualThemeStyle()" class="text-[10px] px-3 py-1.5 bg-black/40 border border-violet-950/60 rounded text-slate-400 hover:text-white transition-all font-bold">TOGGLE_THEME</button>
-                <button onclick="terminateSessionState()" class="text-[10px] px-3 py-1.5 bg-rose-950/20 border border-rose-900/30 rounded text-rose-400 hover:bg-rose-900 transition-all font-bold">DISCONNECT</button>
+            <div class="flex bg-black/60 p-1 rounded border border-violet-950/50 gap-1 text-xs">
+                <button onclick="switchViewTab('licenses')" id="tab-licenses" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all tab-active">KEYS_INDEX</button>
+                <button onclick="switchViewTab('blacklist')" id="tab-blacklist" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">HARDWARE_BANS</button>
+                <button onclick="switchViewTab('logs')" id="tab-logs" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">AUDIT_STREAMS</button>
             </div>
         </div>
     </header>
@@ -88,16 +58,9 @@
             </div>
         </div>
 
-        <div id="view-dashboard" class="space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 cyber-panel cyber-border p-6 rounded"><h3 class="text-xs font-bold mb-4 text-violet-400">// OPERATIONAL TELEMETRY ARRAYS</h3><div class="h-64"><canvas id="activityChart"></canvas></div></div>
-                <div class="cyber-panel cyber-border p-6 rounded"><h3 class="text-xs font-bold mb-4 text-violet-400">// STATUS RATIO CHANNELS</h3><div class="h-64"><canvas id="statusChart"></canvas></div></div>
-            </div>
-        </div>
-
-        <div id="view-licenses" class="hidden space-y-6">
+        <div id="view-licenses" class="space-y-6">
             <div class="cyber-panel cyber-border p-4 rounded grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div class="md:col-span-3">
+                <div class="md:col-span-4">
                     <input type="text" id="custom-key" placeholder="TAG VALUE (OPTIONAL)..." class="w-full bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-white uppercase outline-none focus:border-violet-500">
                 </div>
                 <div class="md:col-span-3">
@@ -106,15 +69,15 @@
                 <div class="md:col-span-3">
                     <button onclick="mintToken()" class="w-full bg-violet-900/30 hover:bg-violet-600 border border-violet-500/40 text-xs font-bold py-2 rounded text-white transition-all">MINT TOKEN CORE</button>
                 </div>
-                <div class="md:col-span-3">
-                    <button onclick="exportMetricsDatasetData('json')" class="w-full bg-zinc-900 border border-zinc-800 text-xs font-bold py-2 rounded text-zinc-300 hover:bg-zinc-800 transition-all">EXPORT REGISTER (JSON)</button>
+                <div class="md:col-span-2">
+                    <button onclick="purgeExpiredTokens()" class="w-full bg-rose-950/20 hover:bg-rose-700 border border-rose-500/30 text-xs font-bold py-2 rounded text-rose-300 transition-all">PURGE OLD</button>
                 </div>
             </div>
 
             <div class="cyber-panel cyber-border rounded overflow-hidden">
-                <div class="p-4 bg-black/40 border-b border-violet-950/40 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="p-4 bg-black/40 border-b border-violet-950/40 flex justify-between items-center">
                     <span class="text-xs font-bold text-white tracking-widest">// ACTIVE LICENSE STREAM REGISTER</span>
-                    <input type="text" id="search-filter" oninput="filterLocalLicenseCache()" placeholder="SEARCH INTERNALLY..." class="bg-black/60 border border-violet-950/50 rounded px-3 py-1 text-xs text-white uppercase outline-none focus:border-violet-500">
+                    <input type="text" id="search-filter" oninput="renderLicenseTable()" placeholder="SEARCH PROFILE OR KEY..." class="bg-black/60 border border-violet-950/50 rounded px-3 py-1 text-xs text-white uppercase outline-none focus:border-violet-500">
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
@@ -122,7 +85,9 @@
                             <tr class="bg-black/20 text-[10px] text-violet-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
                                 <th class="p-4">User Frame Profile</th>
                                 <th class="p-4">Licensing Core Vector</th>
-                                <th class="p-4">Expiration Timestamp</th>
+                                <th class="p-4">Initialization Time</th>
+                                <th class="p-4">Target Host Pipeline</th>
+                                <th class="p-4">Admin Internal Notes</th>
                                 <th class="p-4 text-right">Operations Directives</th>
                             </tr>
                         </thead>
@@ -132,115 +97,48 @@
             </div>
         </div>
 
-        <div id="view-search" class="hidden space-y-4">
-            <div class="cyber-panel cyber-border p-4 rounded grid grid-cols-1 md:grid-cols-4 gap-3">
-                <input type="text" id="search-term" placeholder="TERM QUERY..." class="bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-white outline-none focus:border-violet-500">
-                <select id="search-event" class="bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-slate-400 outline-none focus:border-violet-500">
-                    <option value="">Any Log Event Flag</option>
-                    <option value="INITIALIZATION">INITIALIZATION</option>
-                    <option value="HANDSHAKE">HANDSHAKE</option>
-                    <option value="SHADOW_EVADE_BLOCK">SHADOW_EVADE_BLOCK</option>
-                </select>
-                <button onclick="executeAdvancedPaginatedAuditSearch(1)" class="bg-violet-900/40 border border-violet-500/50 text-white font-bold text-xs py-2 rounded transition-all">QUERY LOG PIPELINES</button>
-                <button onclick="exportMetricsDatasetData('csv')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-bold py-2 rounded transition-all">EXPORT RECORDS (CSV)</button>
-            </div>
+        <div id="view-blacklist" class="hidden space-y-4">
             <div class="cyber-panel cyber-border rounded overflow-hidden">
                 <div class="p-4 bg-black/40 border-b border-violet-950/40">
-                    <span class="text-xs font-bold text-violet-400 tracking-widest">// SECURE CLOUD TRANSACTION FEED</span>
+                    <span class="text-xs font-bold text-rose-400 tracking-widest">// HARDLOCKED HARDWARE & SIGNATURE BAN MATRIX</span>
                 </div>
-                <div id="search-results-terminal-frame" class="p-4 space-y-2 text-xs"></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/20 text-[10px] text-rose-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
+                                <th class="p-4">Profile Avatar Block</th>
+                                <th class="p-4">Roblox System ID</th>
+                                <th class="p-4">Assigned Host Signature Hardware (HWID)</th>
+                                <th class="p-4">Enforcement Trigger Cause</th>
+                                <th class="p-4">Flag Incident Timestamp</th>
+                                <th class="p-4 text-right">Security Operations Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklist-table-rows" class="text-xs font-mono divide-y divide-violet-950/10"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div id="view-profile" class="hidden space-y-6">
-            <div class="cyber-panel cyber-border p-4 rounded flex flex-col sm:flex-row gap-3">
-                <input type="text" id="profile-target-uid" placeholder="ROBLOX USER ID IDENTIFIER VECTOR..." class="flex-1 bg-black/60 border border-violet-950/60 rounded px-3 py-2 text-xs text-white outline-none focus:border-violet-500">
-                <button onclick="loadProfileDeepDivePayload()" class="bg-violet-900/40 border border-violet-500/50 text-white text-xs font-bold px-6 py-2 rounded transition-all">EXECUTE CLUSTER PROBE</button>
-            </div>
-            <div id="profile-deep-dive-display" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="cyber-panel cyber-border p-6 rounded text-center space-y-4">
-                    <img id="profile-avatar" class="w-24 h-24 rounded-full mx-auto border border-violet-500/30 bg-black/50">
-                    <div>
-                        <h3 id="profile-name" class="text-base font-bold text-white">---</h3>
-                        <p id="profile-uid" class="text-[10px] text-slate-500 font-mono mt-1">---</p>
-                    </div>
+        <div id="view-logs" class="hidden space-y-4">
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/40 border-b border-violet-950/40 flex justify-between items-center">
+                    <span class="text-xs font-bold text-violet-400 tracking-widest">// NATIVE SECURITY EVENT REALTIME RECORD STREAMS</span>
+                    <button onclick="clearAuditDatabaseLogs()" class="text-[10px] bg-rose-950/30 border border-rose-500/40 hover:bg-rose-800 px-3 py-1 rounded text-white font-bold transition-all">FLUSH DATA STREAMS</button>
                 </div>
-                <div class="md:col-span-2 cyber-panel cyber-border p-6 rounded space-y-4">
-                    <h4 class="font-bold text-xs text-violet-400 tracking-wider">// MAPPED CREDENTIAL VECTOR MATRIX</h4>
-                    <div id="profile-associated-keys" class="text-xs font-mono space-y-2"></div>
-                </div>
+                <div class="p-4 max-h-[500px] overflow-y-auto space-y-2 text-xs" id="logs-terminal-stream"></div>
             </div>
         </div>
 
     </main>
 
     <script>
-        let socket = io();
-        let token = localStorage.getItem('spectre_jwt_token') || null;
-        let chartInstActivity = null, chartInstStatus = null;
+        let serverTarget = window.location.origin;
         let localKeysCache = [];
-
-        function toggleVisualThemeStyle() {
-            document.body.classList.toggle('dark-theme');
-            document.body.classList.toggle('light-theme');
-        }
-
-        function pushRealtimeNotificationToast(type, message) {
-            const container = document.getElementById('notification-toast-area');
-            const toast = document.createElement('div');
-            toast.className = `p-4 rounded text-xs font-mono border text-white cyber-panel pointer-events-auto transition-all transform translate-y-2 opacity-0 duration-300 ${type === 'error' ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-500'}`;
-            toast.innerText = `[REALTIME CORE ALERT]: ${message}`;
-            container.appendChild(toast);
-            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
-            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 4500);
-        }
-
-        socket.on('notification', data => { 
-            pushRealtimeNotificationToast(data.type, data.message); 
-            pullCloudRegistryDataMetrics(); 
-        });
-
-        function checkSessionStateAuthRequirements() {
-            if (!token) {
-                document.getElementById('auth-modal-screen').classList.remove('hidden');
-            } else {
-                document.getElementById('auth-modal-screen').classList.add('hidden');
-                try {
-                    const decoded = JSON.parse(atob(token.split('.')[1]));
-                    document.getElementById('role-clearance-badge').innerText = `CLEARANCE: ${decoded.role.toUpperCase()}`;
-                    pullCloudRegistryDataMetrics();
-                } catch(e) {
-                    terminateSessionState();
-                }
-            }
-        }
-
-        async function attemptAuthenticationTokenExchange() {
-            const username = document.getElementById('login-user').value;
-            const password = document.getElementById('login-pass').value;
-            const res = await fetch('/api/auth/login', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ username, password }) 
-            });
-            const data = await res.json();
-            if (data.success) {
-                token = data.token;
-                localStorage.setItem('spectre_jwt_token', token);
-                checkSessionStateAuthRequirements();
-            } else {
-                alert(`Handshake rejected: ${data.message}`);
-            }
-        }
-
-        function terminateSessionState() {
-            localStorage.removeItem('spectre_jwt_token');
-            token = null;
-            window.location.reload();
-        }
+        let localBansCache = [];
 
         function switchViewTab(tabId) {
-            ['dashboard', 'licenses', 'search', 'profile'].forEach(t => {
+            ['licenses', 'blacklist', 'logs'].forEach(t => {
                 document.getElementById(`view-${t}`).classList.add('hidden');
                 document.getElementById(`tab-${t}`).classList.remove('tab-active');
             });
@@ -248,187 +146,192 @@
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
         }
 
-        async function pullCloudRegistryDataMetrics() {
-            if (!token) return;
-            const res = await fetch('/api/admin/metrics', { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
-            if (res.status === 401 || res.status === 403) return terminateSessionState();
-            const data = await res.json();
+        async function pullCloudDataRegistry() {
+            try {
+                // Fetch keys and baseline metric payloads
+                const metricsRes = await fetch(`${serverTarget}/api/admin/metrics`);
+                const metrics = await metricsRes.json();
+                localKeysCache = metrics.keysList || [];
 
-            document.getElementById('stat-total').innerText = String(data.totalKeys || 0).padStart(2, '0');
-            document.getElementById('stat-active').innerText = String(data.activeKeys || 0).padStart(2, '0');
-            document.getElementById('stat-revoked').innerText = String(data.blacklistedKeys || 0).padStart(2, '0');
-            document.getElementById('stat-hwid').innerText = String(data.hwidBlocks || 0).padStart(2, '0');
-            
-            localKeysCache = data.keysList || [];
-            renderLicenseTable(localKeysCache);
-            updateDashboardCharts(data);
+                // Fetch dedicated blacklist allocations
+                const blacklistRes = await fetch(`${serverTarget}/api/admin/blacklist/all`);
+                const blacklistData = await blacklistRes.json();
+                localBansCache = blacklistData.blacklist || [];
+
+                // Render metrics widgets
+                document.getElementById('stat-total').innerText = String(metrics.totalKeys || 0).padStart(2, '0');
+                document.getElementById('stat-active').innerText = String(metrics.activeKeys || 0).padStart(2, '0');
+                document.getElementById('stat-revoked').innerText = String(metrics.blacklistedKeys || 0).padStart(2, '0');
+                document.getElementById('stat-hwid').innerText = String(localBansCache.length || 0).padStart(2, '0');
+
+                renderLicenseTable();
+                renderBlacklistTable();
+                renderTerminalLogs(metrics.recentLogs || []);
+            } catch (err) {
+                console.error("Critical Cloud Link Disconnection Sync Fault:", err);
+            }
         }
 
-        function renderLicenseTable(keys) {
+        function renderLicenseTable() {
+            const filter = document.getElementById('search-filter').value.toUpperCase();
             const container = document.getElementById('license-table-rows');
             container.innerHTML = '';
-            keys.forEach(k => {
-                const badge = k.isBlacklisted 
+
+            localKeysCache.forEach(item => {
+                if (filter && !item.key.toUpperCase().includes(filter) && !(item.assignedUser && item.assignedUser.toUpperCase().includes(filter))) return;
+
+                const activatedDisplay = item.activatedAt ? new Date(item.activatedAt).toLocaleString() : "—";
+                const badge = item.isBlacklisted 
                     ? `<span class="text-rose-500 font-bold border border-rose-900/40 px-2 py-0.5 rounded text-[10px] bg-rose-950/20">BLOCKED</span>`
-                    : (!k.assignedUserId ? `<span class="text-amber-500 font-bold border border-amber-900/30 px-2 py-0.5 rounded text-[10px] bg-amber-950/10">VACANT</span>` : `<span class="text-emerald-400 font-bold border border-emerald-900/30 px-2 py-0.5 rounded text-[10px] bg-emerald-950/10">LINKED</span>`);
+                    : (!item.assignedUser ? `<span class="text-amber-500 font-bold border border-amber-900/30 px-2 py-0.5 rounded text-[10px] bg-amber-950/10">VACANT</span>` : `<span class="text-emerald-400 font-bold border border-emerald-900/30 px-2 py-0.5 rounded text-[10px] bg-emerald-950/10">LINKED</span>`);
+
+                const toggleAction = !item.isBlacklisted
+                    ? `<button onclick="revokeLicenseToken('${item.key}')" class="text-[10px] font-bold text-rose-400 hover:text-white bg-rose-950/10 border border-rose-500/20 hover:bg-rose-700 px-2 py-1 rounded transition-all">REVOKE</button>`
+                    : `<button onclick="restoreLicenseToken('${item.key}')" class="text-[10px] font-bold text-violet-400 hover:text-white bg-violet-950/10 border border-violet-500/20 hover:bg-violet-600 px-2 py-1 rounded transition-all">CLEANSE</button>`;
 
                 container.innerHTML += `
                     <tr class="hover:bg-violet-950/5 border-b border-violet-950/10">
                         <td class="p-4 flex items-center gap-3">
-                            <img src="${k.avatarUrl}" class="w-8 h-8 rounded-full border border-violet-500/20 bg-black/50" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
+                            <img src="${item.avatarUrl}" class="w-8 h-8 rounded-full border border-violet-500/20 bg-black/50" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
                             <div>
-                                <div class="text-white font-bold">${k.assignedUser ? k.assignedUser : '—'}</div>
-                                <div class="text-[10px] text-slate-500 font-mono">${k.assignedUserId || 'UNBOUND'}</div>
+                                <div class="text-white font-bold">${item.assignedUser || '—'}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${item.assignedUserId || 'UNBOUND'}</div>
                             </div>
                         </td>
-                        <td class="p-4 font-bold tracking-wider select-all text-violet-300">${k.key}</td>
-                        <td class="p-4 text-slate-400">${k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : '—'}</td>
+                        <td class="p-4 font-bold tracking-wider select-all text-violet-300">${item.key}</td>
+                        <td class="p-4 text-slate-400">${activatedDisplay}</td>
+                        <td class="p-4 text-violet-400/80 font-medium">${item.assignedExecutor || '—'}</td>
+                        <td class="p-4">
+                            ${item.assignedUserId ? `
+                                <input type="text" value="${item.adminNotes || ''}" onchange="submitProfileCrmNotes('${item.assignedUserId}', this.value)" placeholder="Add sync logs..." class="w-full max-w-[240px] bg-black/50 border border-violet-950/40 text-[11px] px-2 py-1 text-slate-300 rounded outline-none focus:border-violet-500">
+                            ` : '<span class="text-slate-600 text-[10px] italic">Awaiting registration...</span>'}
+                        </td>
                         <td class="p-4 text-right">
-                            <div class="flex justify-end gap-2 items-center">
-                                ${badge}
-                                ${!k.isBlacklisted ? `<button onclick="revokeLicenseToken('${k.key}')" class="text-[10px] font-bold text-rose-400 hover:text-white bg-rose-950/10 border border-rose-500/20 hover:bg-rose-700 px-2 py-1 rounded transition-all">REVOKE</button>` : ''}
-                            </div>
+                            <div class="flex justify-end gap-2 items-center">${badge} ${toggleAction}</div>
                         </td>
-                    </tr>`;
+                    </tr>
+                `;
             });
         }
 
-        function filterLocalLicenseCache() {
-            const filter = document.getElementById('search-filter').value.toUpperCase();
-            const matched = localKeysCache.filter(item => 
-                item.key.toUpperCase().includes(filter) || 
-                (item.assignedUserId && item.assignedUserId.toUpperCase().includes(filter))
-            );
-            renderLicenseTable(matched);
+        function renderBlacklistTable() {
+            const container = document.getElementById('blacklist-table-rows');
+            container.innerHTML = '';
+
+            if (localBansCache.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-600 font-mono tracking-widest">NO GLOBAL HWID ENFORCEMENT RECORDS ON FILE</td></tr>`;
+                return;
+            }
+
+            localBansCache.forEach(ban => {
+                const headshotUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${ban.robloxUserId}&width=150&height=150&format=png`;
+                container.innerHTML += `
+                    <tr class="hover:bg-rose-950/5 border-b border-violet-950/10">
+                        <td class="p-4">
+                            <img src="${headshotUrl}" class="w-8 h-8 rounded-full border border-rose-500/30 bg-black/40" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
+                        </td>
+                        <td class="p-4 font-bold text-white select-all">${ban.robloxUserId}</td>
+                        <td class="p-4 text-slate-400 select-all font-mono text-[11px] max-w-[150px] truncate" title="${ban.hwid}">${ban.hwid}</td>
+                        <td class="p-4 text-rose-400/90 font-medium">${ban.reason}</td>
+                        <td class="p-4 text-slate-500">${new Date(ban.flaggedAt).toLocaleString()}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="liftShadowEnforcementBan('${ban.robloxUserId}')" class="text-[10px] font-bold text-emerald-400 hover:text-white border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-600 px-3 py-1 rounded transition-all">LIFT_BAN</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderTerminalLogs(logs) {
+            const stream = document.getElementById('logs-terminal-stream');
+            stream.innerHTML = '';
+            
+            if (!logs || logs.length === 0) {
+                stream.innerHTML = `<div class="text-slate-600 italic">// Awaiting stream telemetry pipes...</div>`;
+                return;
+            }
+
+            logs.forEach(log => {
+                let color = "text-violet-400";
+                if (log.event.includes("TERMINATED") || log.event.includes("BLACK") || log.event.includes("EVADE") || log.event.includes("MANUAL_BAN")) color = "text-rose-500 font-bold";
+                if (log.event.includes("INITIALIZATION") || log.event.includes("UNBAN") || log.event.includes("GLOBAL_UNBAN")) color = "text-emerald-400 font-bold";
+
+                stream.innerHTML += `
+                    <div class="p-2 bg-black/40 rounded border border-violet-950/20 flex flex-col md:flex-row md:justify-between font-mono gap-1">
+                        <div>
+                            <span class="text-slate-500">[${new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span class="${color}">[${log.event}]</span>
+                            <span class="text-white">User: ${log.username || '—'}</span> | 
+                            <span class="text-slate-400 text-[11px]">Key: ${log.key}</span>
+                        </div>
+                        <div class="text-slate-500 text-[11px]">HWID Trace: ${log.hwid || '—'} [${log.status}]</div>
+                    </div>
+                `;
+            });
         }
 
         async function mintToken() {
             const customKey = document.getElementById('custom-key').value.trim();
             const durationHours = document.getElementById('key-hours').value.trim();
-            await fetch('/api/admin/keys/create', {
+            await fetch(`${serverTarget}/api/admin/keys/create`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ customKey: customKey || null, durationHours: durationHours || "24" })
             });
             document.getElementById('custom-key').value = '';
             document.getElementById('key-hours').value = '';
+            pullCloudDataRegistry();
+        }
+
+        async function submitProfileCrmNotes(robloxUserId, notes) {
+            await fetch(`${serverTarget}/api/admin/profile/notes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ robloxUserId, notes })
+            });
+            pullCloudDataRegistry();
         }
 
         async function revokeLicenseToken(key) {
-            const reason = prompt("Specify core architecture hard-ban revocation override context:");
-            if (!reason) return;
-            await fetch('/api/admin/keys/blacklist', {
+            const reason = prompt("Specify license revocation protocol trigger context:");
+            if (reason === null) return;
+            await fetch(`${serverTarget}/api/admin/keys/blacklist`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ key, reason })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key, reason: reason || "Manual System Admin Hard-ban Override" })
             });
+            pullCloudDataRegistry();
         }
 
-        async function executeAdvancedPaginatedAuditSearch(page = 1) {
-            const term = document.getElementById('search-term').value;
-            const event = document.getElementById('search-event').value;
-            const res = await fetch(`/api/admin/logs/search?term=${term}&event=${event}&page=${page}`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
+        async function restoreLicenseToken(key) {
+            if (!confirm("Execute full database restore protocols for this key token?")) return;
+            await fetch(`${serverTarget}/api/admin/keys/restore`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key })
             });
-            const data = await res.json();
-            
-            const container = document.getElementById('search-results-terminal-frame');
-            container.innerHTML = '';
-            
-            if (!data.logs || data.logs.length === 0) {
-                container.innerHTML = `<div class="text-slate-600 italic">// Query returned zero cluster footprints...</div>`;
-                return;
-            }
-
-            data.logs.forEach(l => {
-                let color = "text-violet-400";
-                if (l.event.includes("BLOCK")) color = "text-rose-500 font-bold";
-                container.innerHTML += `
-                    <div class="p-2.5 bg-black/40 rounded border border-violet-950/20 flex flex-col md:flex-row justify-between gap-1">
-                        <div>
-                            <span class="text-slate-500">[${new Date(l.timestamp).toLocaleTimeString()}]</span>
-                            <span class="${color}">[${l.event}]</span>
-                            <span class="text-white">Profile ID: ${l.username || '—'}</span>
-                        </div>
-                        <div class="text-slate-500 text-[11px]">Trace HWID: ${l.hwid || '—'} [${l.status || 'SUCCESS'}]</div>
-                    </div>`;
-            });
+            pullCloudDataRegistry();
         }
 
-        async function loadProfileDeepDivePayload() {
-            const uid = document.getElementById('profile-target-uid').value.trim();
-            if (!uid) return;
-            const res = await fetch(`/api/admin/profile/deep-dive/${uid}`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
-            const payload = await res.json();
-            if (!payload.success) return alert("UID footprint missing inside active profile registers.");
-
-            const d = payload.data;
-            document.getElementById('profile-deep-dive-display').classList.remove('hidden');
-            document.getElementById('profile-avatar').src = d.avatarUrl;
-            document.getElementById('profile-name').innerText = d.identity.username || "Legacy Footprint Element";
-            document.getElementById('profile-uid').innerText = `UID STRUCT LINK: ${d.identity.robloxUserId}`;
-
-            const keyBox = document.getElementById('profile-associated-keys');
-            keyBox.innerHTML = '';
-            if (d.associatedKeys.length === 0) {
-                keyBox.innerHTML = `<span class="text-slate-600 italic">No historical tokens bound.</span>`;
-            } else {
-                d.associatedKeys.forEach(k => { 
-                    keyBox.innerHTML += `<div class="p-2 bg-black/30 border border-violet-950/20 rounded">VECTOR: <span class="text-violet-300 font-bold">${k.key}</span> | REVENUE_LOCK: ${k.isBlacklisted ? 'SUSPENDED' : 'OPERATIONAL'}</div>`; 
-                });
-            }
+        async function liftShadowEnforcementBan(robloxUserId) {
+            if (!confirm(`Purge profile ${robloxUserId} and matching hardware signatures from system wide shadow enforcement?`)) return;
+            await fetch(`${serverTarget}/api/admin/blacklist/remove/${robloxUserId}`, { method: "DELETE" });
+            pullCloudDataRegistry();
         }
 
-        function exportMetricsDatasetData(format) {
-            if (format === 'json') {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localKeysCache));
-                const dlAnchorElem = document.createElement('a');
-                dlAnchorElem.setAttribute("href", dataStr);
-                dlAnchorElem.setAttribute("download", "spectre_v3_keys.json");
-                dlAnchorElem.click();
-            } else if (format === 'csv') {
-                let csvContent = "data:text/csv;charset=utf-8,Key,AssignedUserUID,IsBlacklisted\n";
-                localKeysCache.forEach(k => { csvContent += `${k.key},${k.assignedUserId || '—'},${k.isBlacklisted}\n`; });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "spectre_v3_audit.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+        async function purgeExpiredTokens() {
+            await fetch(`${serverTarget}/api/admin/keys/purge-expired`, { method: "POST" });
+            pullCloudDataRegistry();
         }
 
-        function updateDashboardCharts(metrics) {
-            const activeCount = metrics.activeKeys || 0;
-            const blacklistedCount = metrics.blacklistedKeys || 0;
-            const total = metrics.totalKeys || 0;
-
-            chartInstStatus.data.datasets[0].data = [activeCount, total - activeCount - blacklistedCount, blacklistedCount];
-            chartInstStatus.update();
-
-            chartInstActivity.data.datasets[0].data = [metrics.recentLogs?.length || 0, activeCount, blacklistedCount, total];
-            chartInstActivity.update();
+        async function clearAuditDatabaseLogs() {
+            if (!confirm("Scrub all operational terminal trace history entries completely?")) return;
+            await fetch(`${serverTarget}/api/admin/logs/clear`, { method: "POST" });
+            pullCloudDataRegistry();
         }
 
-        window.onload = function() {
-            chartInstActivity = new Chart(document.getElementById("activityChart"), { 
-                type: "line", 
-                data: { labels: ["Stream Logs Size", "Allocated Nodes", "Blacklist Arrays", "Global Matrix Size"], datasets: [{ label: "Data Telemetry Vectors", data: [0, 0, 0, 0], borderColor: "#8b5cf6", backgroundColor: "rgba(139,92,246,0.05)", fill: true, tension: 0.2 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(139,92,246,0.05)' } }, x: { grid: { display: false } } } } 
-            });
-            chartInstStatus = new Chart(document.getElementById("statusChart"), { 
-                type: "doughnut", 
-                data: { labels: ["Active Channels", "Vacant Core", "Enforcement Suspended"], datasets: [{ data: [0, 0, 0], backgroundColor: ["#10b981", "#f59e0b", "#f43f5e"], borderWidth: 0 }] }, 
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Fira Code' } } } } } 
-            });
-            
-            checkSessionStateAuthRequirements();
-        };
+        setInterval(pullCloudDataRegistry, 5000);
+        window.onload = pullCloudDataRegistry;
     </script>
 </body>
 </html>
