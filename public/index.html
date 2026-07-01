@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPECTRE // COMMAND NEXUS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Fira Code', monospace; transition: background-color 0.3s, color 0.3s; }
@@ -13,223 +14,380 @@
         .cyber-border { border: 1px solid rgba(139, 92, 246, 0.15); }
         .dark .cyber-panel { background: rgba(8, 8, 12, 0.95); backdrop-filter: blur(16px); }
         .light .cyber-panel { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .matrix-bg { background-image: linear-gradient(rgba(139, 92, 246, 0.005) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.005) 1px, transparent 1px); background-size: 32px 32px; }
+        .tab-active { border-color: #8b5cf6; color: #ffffff; background: rgba(139, 92, 246, 0.08); }
+        .light .tab-active { background: rgba(139, 92, 246, 0.1); color: #7c3aed; font-weight: 700; }
     </style>
 </head>
-<body class="matrix-bg min-h-screen">
+<body class="min-h-screen flex flex-col">
 
-    <!-- Top Status Navigation bar panel -->
-    <nav class="cyber-panel border-b border-slate-800/50 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center space-x-3">
-            <div class="h-2 w-2 rounded-full bg-violet-500 animate-pulse"></div>
-            <span class="text-white font-bold text-xs tracking-wider">SPECTRE // CENTRAL COMMAND GATEWAY</span>
+    <header class="cyber-panel border-b border-violet-950/40 px-6 py-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="relative w-4 h-4">
+                    <span class="absolute inset-0 bg-violet-500 rounded-full animate-ping opacity-70"></span>
+                    <span class="absolute inset-0 bg-violet-600 rounded-full shadow-[0_0_12px_#8b5cf6]"></span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold dark:text-white light:text-slate-900 tracking-widest">SPECTRE Core // HQ MUX</h1>
+                    <p class="text-[10px] text-violet-400/70 font-mono tracking-wider">SECURE ENTERPRISE PROFILE TELEMETRY CONSOLE</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex bg-black/60 light:bg-slate-200 p-1 rounded border border-violet-950/50 gap-1 text-xs">
+                    <button onclick="switchViewTab('analytics')" id="tab-analytics" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all tab-active">ANALYTICS_MATRIX</button>
+                    <button onclick="switchViewTab('licenses')" id="tab-licenses" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">KEYS_INDEX</button>
+                    <button onclick="switchViewTab('blacklist')" id="tab-blacklist" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">HARDWARE_BANS</button>
+                    <button onclick="switchViewTab('logs')" id="tab-logs" class="px-4 py-1.5 rounded text-slate-400 font-medium transition-all">AUDIT_STREAMS</button>
+                </div>
+                <button onclick="toggleThemeEngine()" class="bg-violet-900/20 border border-violet-500/30 text-white font-bold px-3 py-1.5 rounded text-xs hover:bg-violet-600 transition-all">TOGGLE_THEME</button>
+            </div>
         </div>
-        <div class="flex items-center space-x-4">
-            <button onclick="toggleColorLightMode()" class="text-[11px] text-slate-500 hover:text-slate-300 border border-slate-800 px-2 py-1 rounded">THEME TOGGLE</button>
-            <span id="liveClockDisplay" class="text-[11px] text-slate-400 font-mono font-bold">00:00:00 UTC</span>
-        </div>
-    </nav>
+    </header>
 
-    <div class="max-w-[1400px] mx-auto p-8 space-y-8">
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-grow space-y-6">
         
-        <!-- High Level Tracking Card Arrays -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="cyber-panel cyber-border p-5 rounded-lg relative overflow-hidden">
-                <span class="text-[10px] text-slate-500 block font-bold tracking-widest">ACTIVE KEYS IN FLIGHT</span>
-                <span id="metricTotalKeys" class="text-2xl text-white font-bold mt-2 block">0</span>
-                <div class="absolute bottom-0 left-0 w-full h-[1px] bg-violet-500/20"></div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-violet-500">
+                <span class="text-[10px] text-violet-400 tracking-wider block font-bold">TOTAL TOKENS</span>
+                <span id="stat-total" class="text-3xl font-bold dark:text-white light:text-slate-800 mt-1 block">00</span>
             </div>
-            <div class="cyber-panel cyber-border p-5 rounded-lg relative overflow-hidden">
-                <span class="text-[10px] text-slate-500 block font-bold tracking-widest">ENFORCEMENT BLOCKADES</span>
-                <span id="metricActiveBans" class="text-2xl text-red-400 font-bold mt-2 block">0</span>
-                <div class="absolute bottom-0 left-0 w-full h-[1px] bg-red-500/20"></div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-emerald-500">
+                <span class="text-[10px] text-emerald-400 tracking-wider block font-bold">ACTIVE CHANNELS</span>
+                <span id="stat-active" class="text-3xl font-bold dark:text-white light:text-slate-800 mt-1 block">00</span>
             </div>
-            <div class="cyber-panel cyber-border p-5 rounded-lg relative overflow-hidden">
-                <span class="text-[10px] text-slate-500 block font-bold tracking-widest">DISCORD TRIALS ISSUED</span>
-                <span id="metricTrialsIssued" class="text-2xl text-violet-400 font-bold mt-2 block">0</span>
-                <div class="absolute bottom-0 left-0 w-full h-[1px] bg-violet-400/20"></div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-amber-500">
+                <span class="text-[10px] text-amber-400 tracking-wider block font-bold">REVOKED TOKENS</span>
+                <span id="stat-revoked" class="text-3xl font-bold dark:text-white light:text-slate-800 mt-1 block">00</span>
             </div>
-            <div class="cyber-panel cyber-border p-5 rounded-lg flex flex-col justify-between">
-                <span class="text-[10px] text-slate-500 font-bold tracking-widest block mb-2">QUICK TELEMETRY ACTIONS</span>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="generateSystemKey(30)" class="bg-violet-600 hover:bg-violet-500 text-white text-[10px] py-1.5 px-3 rounded font-bold transition-all">GEN 30D KEY</button>
-                    <button onclick="addUserToBlacklist()" class="bg-red-950/20 text-red-400 border border-red-900/40 hover:bg-red-900/20 text-[10px] py-1.5 px-3 rounded font-bold transition-all">RESTRICT ID</button>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-rose-600">
+                <span class="text-[10px] text-rose-400 tracking-wider block font-bold">HWID BLOCKS</span>
+                <span id="stat-hwid" class="text-3xl font-bold dark:text-white light:text-slate-800 mt-1 block">00</span>
+            </div>
+            <div class="cyber-panel cyber-border p-4 rounded border-l-2 border-l-indigo-500 col-span-2 md:col-span-1">
+                <span class="text-[10px] text-indigo-400 tracking-wider block font-bold">DISCORD TRIALS</span>
+                <span id="stat-trials" class="text-3xl font-bold dark:text-white light:text-slate-800 mt-1 block">00</span>
+            </div>
+        </div>
+
+        <div id="view-analytics" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="cyber-panel cyber-border p-4 rounded md:col-span-2">
+                <h3 class="text-xs font-bold text-violet-400 mb-4">// OPERATIONAL TELEMETRY ARRAYS</h3>
+                <div class="h-64"><canvas id="lineChartTelemetry"></canvas></div>
+            </div>
+            <div class="cyber-panel cyber-border p-4 rounded">
+                <h3 class="text-xs font-bold text-violet-400 mb-4">// STATUS RATIO CHANNELS</h3>
+                <div class="h-64 flex justify-center"><canvas id="pieChartTelemetry"></canvas></div>
+            </div>
+        </div>
+
+        <div id="view-licenses" class="hidden space-y-6">
+            <div class="cyber-panel cyber-border p-4 rounded grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <div class="md:col-span-4">
+                    <input type="text" id="custom-key" placeholder="TAG VALUE (OPTIONAL)..." class="w-full bg-black/40 border border-violet-950/60 rounded px-3 py-2 text-xs text-white uppercase outline-none focus:border-violet-500">
+                </div>
+                <div class="md:col-span-3">
+                    <input type="number" id="key-hours" placeholder="HOURS RUN VALUE..." class="w-full bg-black/40 border border-violet-950/60 rounded px-3 py-2 text-xs text-white outline-none focus:border-violet-500">
+                </div>
+                <div class="md:col-span-3">
+                    <button onclick="mintToken()" class="w-full bg-violet-900/30 hover:bg-violet-600 border border-violet-500/40 text-xs font-bold py-2 rounded text-white transition-all">MINT TOKEN CORE</button>
+                </div>
+                <div class="md:col-span-2">
+                    <button onclick="purgeExpiredTokens()" class="w-full bg-rose-950/20 hover:bg-rose-700 border border-rose-500/30 text-xs font-bold py-2 rounded text-rose-300 transition-all">PURGE OLD</button>
+                </div>
+            </div>
+
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/20 border-b border-violet-950/40 flex justify-between items-center">
+                    <span class="text-xs font-bold text-violet-400 tracking-widest">// ACTIVE LICENSE STREAM REGISTER</span>
+                    <input type="text" id="search-filter" oninput="renderLicenseTable()" placeholder="SEARCH PROFILE OR KEY..." class="bg-black/40 border border-violet-950/50 rounded px-3 py-1 text-xs text-white uppercase outline-none focus:border-violet-500">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/10 text-[10px] text-violet-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
+                                <th class="p-4">User Frame Profile</th>
+                                <th class="p-4">Licensing Vector</th>
+                                <th class="p-4">Initialization</th>
+                                <th class="p-4">Target Host Pipeline</th>
+                                <th class="p-4">CRM Account Notes</th>
+                                <th class="p-4 text-right">Operations Directives</th>
+                            </tr>
+                        </thead>
+                        <tbody id="license-table-rows" class="text-xs font-mono divide-y divide-violet-950/10"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Left Data Entry table component container layout -->
-            <div class="lg:col-span-2 space-y-6">
-                <div class="cyber-panel cyber-border rounded-lg overflow-hidden">
-                    <div class="border-b border-slate-800/60 p-4 bg-slate-900/20 flex justify-between items-center">
-                        <span class="text-xs text-white font-bold tracking-wider">MANAGED SYSTEM LICENSE CREDENTIAL KEYS</span>
-                        <button onclick="purgeExpiredTokens()" class="text-[10px] text-slate-500 hover:text-red-400 border border-slate-800 px-2 py-1 rounded transition-all">PURGE EXPIRED</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-black/20 text-slate-500 text-[10px] uppercase tracking-wider border-b border-slate-900">
-                                <tr>
-                                    <th class="p-4">Key String</th>
-                                    <th class="p-4">Assigned Identity</th>
-                                    <th class="p-4">Hardware Signature</th>
-                                    <th class="p-4">Status State</th>
-                                    <th class="p-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="keysTableBody">
-                                <tr>
-                                    <td colspan="5" class="p-8 text-center text-slate-600">Syncing with remote host infrastructure container...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <div id="view-blacklist" class="hidden space-y-4">
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/20 border-b border-violet-950/40"><span class="text-xs font-bold text-rose-400 tracking-widest">// HARDLOCKED HARDWARE BAN MATRIX</span></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/10 text-[10px] text-rose-400 font-bold uppercase tracking-wider border-b border-violet-950/30">
+                                <th class="p-4">Avatar</th>
+                                <th class="p-4">Roblox System ID</th>
+                                <th class="p-4">Signature Hardware (HWID)</th>
+                                <th class="p-4">Enforcement Cause</th>
+                                <th class="p-4">Flag Incident Timestamp</th>
+                                <th class="p-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklist-table-rows" class="text-xs font-mono divide-y divide-violet-950/10"></tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Real-time Activity Output Panel Frame -->
-            <div class="space-y-6">
-                <div class="cyber-panel cyber-border rounded-lg overflow-hidden">
-                    <div class="border-b border-slate-800/60 p-4 bg-slate-900/20 flex justify-between items-center">
-                        <span class="text-xs text-white font-bold tracking-wider">LIVE TELEMETRY STREAM LOGS</span>
-                        <button onclick="clearAuditDatabaseLogs()" class="text-[10px] text-slate-500 hover:text-red-400 border border-slate-800 px-2 py-1 rounded transition-all">FLUSH FEED</button>
+        <div id="view-logs" class="hidden space-y-4">
+            <div class="cyber-panel cyber-border rounded overflow-hidden">
+                <div class="p-4 bg-black/20 border-b border-violet-950/40 flex justify-between items-center">
+                    <span class="text-xs font-bold text-violet-400 tracking-widest">// REALTIME TELEMETRY RECORD STREAMS</span>
+                    <button onclick="clearAuditDatabaseLogs()" class="text-[10px] bg-rose-950/30 border border-rose-500/40 hover:bg-rose-800 px-3 py-1 rounded text-white font-bold transition-all">FLUSH LOGS</button>
+                </div>
+                <div class="p-4 max-h-[500px] overflow-y-auto space-y-2 text-xs" id="logs-terminal-stream"></div>
+            </div>
+        </div>
+
+        <div id="deep-dive-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="cyber-panel cyber-border max-w-4xl w-full rounded overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-4 bg-violet-950/30 border-b border-violet-500/20 flex justify-between items-center">
+                    <span class="text-xs font-bold text-violet-400 tracking-widest">// SECURITY IDENTITY INSIGHTS DEEP DIVE</span>
+                    <button onclick="closeDeepDiveModal()" class="text-slate-400 hover:text-white font-bold">&times; CLOSE</button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-6">
+                    <div class="flex flex-col md:flex-row gap-6 items-center bg-black/40 p-4 rounded border border-violet-950/40">
+                        <img id="modal-avatar" src="" class="w-20 h-20 rounded-full border-2 border-violet-500/40">
+                        <div class="space-y-1 text-center md:text-left">
+                            <h2 id="modal-username" class="text-xl font-bold text-white">---</h2>
+                            <p id="modal-uid" class="text-xs text-violet-400">UID: ---</p>
+                            <p id="modal-ban-badge" class="mt-2 inline-block text-[10px] font-bold px-2 py-0.5 rounded"></p>
+                        </div>
+                        <div class="md:ml-auto grid grid-cols-3 gap-4 text-center">
+                            <div class="p-2 bg-black/60 rounded border border-violet-950/20"><span class="text-[10px] text-slate-500 block">HANDSHAKES</span><span id="modal-stat-handshakes" class="text-lg font-bold text-emerald-400">0</span></div>
+                            <div class="p-2 bg-black/60 rounded border border-violet-950/20"><span class="text-[10px] text-slate-500 block">INITIALIZATIONS</span><span id="modal-stat-inits" class="text-lg font-bold text-violet-400">0</span></div>
+                            <div class="p-2 bg-black/60 rounded border border-violet-950/20"><span class="text-[10px] text-slate-500 block">INFRACTIONS</span><span id="modal-stat-infractions" class="text-lg font-bold text-rose-500">0</span></div>
+                        </div>
                     </div>
-                    <div id="logsTerminalContainer" class="p-4 max-h-[500px] overflow-y-auto space-y-3 font-mono text-[11px] leading-relaxed">
-                        <div class="text-slate-600">Awaiting cluster feed sync metrics...</div>
+                    <div>
+                        <h4 class="text-xs font-bold text-violet-400 mb-2">// PROFILE ACTIVITY TELEMETRY AUDIT LOGS</h4>
+                        <div id="modal-logs-container" class="space-y-1.5 max-h-48 overflow-y-auto text-xs bg-black/20 p-2 rounded border border-violet-950/20"></div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+
+    </main>
 
     <script>
-        const serverTarget = window.location.origin;
+        let serverTarget = window.location.origin;
+        let localKeysCache = [];
+        let localBansCache = [];
+        let lineChartInstance = null;
+        let pieChartInstance = null;
 
-        function toggleColorLightMode() {
-            document.documentElement.classList.toggle('dark');
+        function switchViewTab(tabId) {
+            ['analytics', 'licenses', 'blacklist', 'logs'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('tab-active');
         }
 
-        function updateClock() {
-            document.getElementById('liveClockDisplay').innerText = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        function toggleThemeEngine() {
+            const html = document.documentElement;
+            if(html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+            }
         }
-        setInterval(updateClock, 1000);
 
         async function pullCloudDataRegistry() {
             try {
-                const res = await fetch(`${serverTarget}/api/admin/metrics`);
-                const data = await res.json();
-                if (!data.success) return;
+                const metricsRes = await fetch(`${serverTarget}/api/admin/metrics`);
+                const metrics = await metricsRes.json();
+                localKeysCache = metrics.keysList || [];
 
-                document.getElementById('metricTotalKeys').innerText = data.totalKeys;
-                document.getElementById('metricActiveBans').innerText = data.activeBans;
-                document.getElementById('metricTrialsIssued').innerText = data.trialsIssued;
+                const blacklistRes = await fetch(`${serverTarget}/api/admin/blacklist/all`);
+                const blacklistData = await blacklistRes.json();
+                localBansCache = blacklistData.blacklist || [];
 
-                const tableBody = document.getElementById('keysTableBody');
-                tableBody.innerHTML = '';
+                document.getElementById('stat-total').innerText = String(metrics.totalKeys || 0).padStart(2, '0');
+                document.getElementById('stat-active').innerText = String(metrics.activeKeys || 0).padStart(2, '0');
+                document.getElementById('stat-revoked').innerText = String(metrics.blacklistedKeys || 0).padStart(2, '0');
+                document.getElementById('stat-hwid').innerText = String(localBansCache.length || 0).padStart(2, '0');
+                document.getElementById('stat-trials').innerText = String(metrics.trialsIssued || 0).padStart(2, '0');
 
-                data.keysList.forEach(k => {
-                    let statusLabel = `<span class="text-emerald-400 font-bold bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-500/20 text-[10px]">ACTIVE</span>`;
-                    if (k.isBlacklisted) {
-                        statusLabel = `<span class="text-red-400 font-bold bg-red-950/20 px-2 py-0.5 rounded border border-red-500/20 text-[10px]">VOID</span>`;
-                    } else if (k.expiresAt && new Date(k.expiresAt) < new Date()) {
-                        statusLabel = `<span class="text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[10px]">EXPIRED</span>`;
-                    }
+                renderLicenseTable();
+                renderBlacklistTable();
+                renderTerminalLogs(metrics.recentLogs || []);
+                updateAnalyticsCharts(metrics.chartTimeline || [], metrics.chartData || [], metrics);
+            } catch (err) { console.error("Cloud link disconnect fault:", err); }
+        }
 
-                    const row = document.createElement('tr');
-                    row.className = "border-b border-slate-900 hover:bg-slate-900/10 transition-colors";
-                    row.innerHTML = `
-                        <td class="p-4 font-mono font-bold text-white selection:bg-violet-500/30">${k.key}</td>
-                        <td class="p-4 text-slate-400">${k.assignedUser || '<span class="text-slate-600 font-normal">Unbound Pass</span>'}</td>
-                        <td class="p-4 font-mono text-[10px] text-slate-500" title="${k.assignedHWID}">${k.assignedHWID ? k.assignedHWID.substring(0,12)+'...' : '---'}</td>
-                        <td class="p-4">${statusLabel}</td>
-                        <td class="p-4 text-right space-x-1">
-                            ${k.isBlacklisted ? 
-                                `<button onclick="restoreLicenseToken('${k.key}')" class="text-emerald-400 hover:underline text-[11px]">Restore</button>` : 
-                                `<button onclick="revokeLicenseToken('${k.key}')" class="text-red-400 hover:underline text-[11px]">Revoke</button>`
-                            }
+        function updateAnalyticsCharts(timeline, chartData, metrics) {
+            if (!lineChartInstance) {
+                const ctxLine = document.getElementById('lineChartTelemetry').getContext('2d');
+                lineChartInstance = new Chart(ctxLine, {
+                    type: 'line',
+                    data: { labels: timeline, datasets: [{ label: 'Inbound Requests', data: chartData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', fill: true, tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            } else {
+                lineChartInstance.data.labels = timeline;
+                lineChartInstance.data.datasets[0].data = chartData;
+                lineChartInstance.update();
+            }
+
+            if (!pieChartInstance) {
+                const ctxPie = document.getElementById('pieChartTelemetry').getContext('2d');
+                pieChartInstance = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: { labels: ['Active Keys', 'Revoked Keys'], datasets: [{ data: [metrics.activeKeys || 0, metrics.blacklistedKeys || 0], backgroundColor: ['#10b981', '#f43f5e'] }] },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            } else {
+                pieChartInstance.data.datasets[0].data = [metrics.activeKeys || 0, metrics.blacklistedKeys || 0];
+                pieChartInstance.update();
+            }
+        }
+
+        function renderLicenseTable() {
+            const filter = document.getElementById('search-filter').value.toUpperCase();
+            const container = document.getElementById('license-table-rows');
+            container.innerHTML = '';
+
+            localKeysCache.forEach(item => {
+                if (filter && !item.key.toUpperCase().includes(filter) && !(item.assignedUser && item.assignedUser.toUpperCase().includes(filter))) return;
+
+                const activatedDisplay = item.activatedAt ? new Date(item.activatedAt).toLocaleString() : "—";
+                const badge = item.isBlacklisted 
+                    ? `<span class="text-rose-500 font-bold border border-rose-900/40 px-2 py-0.5 rounded text-[10px] bg-rose-950/20">BLOCKED</span>`
+                    : (!item.assignedUser ? `<span class="text-amber-500 font-bold border border-amber-900/30 px-2 py-0.5 rounded text-[10px] bg-amber-950/10">VACANT</span>` : `<span class="text-emerald-400 font-bold border border-emerald-900/30 px-2 py-0.5 rounded text-[10px] bg-emerald-950/10">LINKED</span>`);
+
+                const toggleAction = !item.isBlacklisted
+                    ? `<button onclick="revokeLicenseToken('${item.key}')" class="text-[10px] font-bold text-rose-400 hover:text-white bg-rose-950/10 border border-rose-500/20 hover:bg-rose-700 px-2 py-1 rounded transition-all">REVOKE</button>`
+                    : `<button onclick="restoreLicenseToken('${item.key}')" class="text-[10px] font-bold text-violet-400 hover:text-white bg-violet-950/10 border border-violet-500/20 hover:bg-violet-600 px-2 py-1 rounded transition-all">CLEANSE</button>`;
+
+                const inspectButton = item.assignedUserId ? `<button onclick="launchDeepDiveInspector('${item.assignedUserId}')" class="text-[10px] text-violet-400 font-bold underline hover:text-white ml-2">INSPECT</button>` : '';
+
+                container.innerHTML += `
+                    <tr class="hover:bg-violet-950/5 border-b border-violet-950/10">
+                        <td class="p-4 flex items-center gap-3">
+                            <img src="${item.avatarUrl}" class="w-8 h-8 rounded-full border border-violet-500/20 bg-black/50">
+                            <div>
+                                <div class="text-white font-bold flex items-center">${item.assignedUser || '—'} ${inspectButton}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${item.assignedUserId || 'UNBOUND'}</div>
+                            </div>
                         </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
+                        <td class="p-4 font-bold tracking-wider text-violet-300">${item.key}</td>
+                        <td class="p-4 text-slate-400">${activatedDisplay}</td>
+                        <td class="p-4 text-violet-400/80 font-medium">${item.assignedExecutor || '—'}</td>
+                        <td class="p-4">
+                            ${item.assignedUserId ? `<input type="text" value="${item.adminNotes || ''}" onchange="submitProfileCrmNotes('${item.assignedUserId}', this.value)" placeholder="Sync log..." class="w-full max-w-[200px] bg-black/50 border border-violet-950/40 text-[11px] px-2 py-1 text-slate-300 rounded outline-none focus:border-violet-500">` : '<span class="text-slate-600 text-[10px] italic">Awaiting profile...</span>'}
+                        </td>
+                        <td class="p-4 text-right"><div class="flex justify-end gap-2 items-center">${badge} ${toggleAction}</div></td>
+                    </tr>
+                `;
+            });
+        }
 
-                const logsContainer = document.getElementById('logsTerminalContainer');
-                logsContainer.innerHTML = '';
+        function renderBlacklistTable() {
+            const container = document.getElementById('blacklist-table-rows');
+            container.innerHTML = '';
+            if (localBansCache.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-600 font-mono tracking-widest">NO GLOBAL HWID ENFORCEMENT RECORDS ON FILE</td></tr>`;
+                return;
+            }
+            localBansCache.forEach(ban => {
+                const headshotUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${ban.robloxUserId}&width=150&height=150&format=png`;
+                container.innerHTML += `
+                    <tr class="hover:bg-rose-950/5 border-b border-violet-950/10">
+                        <td class="p-4"><img src="${headshotUrl}" class="w-8 h-8 rounded-full border border-rose-500/30"></td>
+                        <td class="p-4 font-bold text-white select-all">${ban.robloxUserId} <button onclick="launchDeepDiveInspector('${ban.robloxUserId}')" class="text-[10px] text-rose-400 font-bold underline ml-1">INSPECT</button></td>
+                        <td class="p-4 text-slate-400 font-mono text-[11px] max-w-[150px] truncate" title="${ban.hwid}">${ban.hwid}</td>
+                        <td class="p-4 text-rose-400/90 font-medium">${ban.reason}</td>
+                        <td class="p-4 text-slate-500">${new Date(ban.flaggedAt).toLocaleString()}</td>
+                        <td class="p-4 text-right"><button onclick="liftShadowEnforcementBan('${ban.robloxUserId}')" class="text-[10px] font-bold text-emerald-400 hover:text-white border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-600 px-3 py-1 rounded transition-all">LIFT_BAN</button></td>
+                    </tr>
+                `;
+            });
+        }
 
-                data.activityLogs.forEach(l => {
-                    const logElement = document.createElement('div');
-                    logElement.className = "p-2 rounded bg-black/20 border border-slate-900 flex justify-between items-start space-x-4";
-                    
-                    let statusColor = "text-violet-400";
-                    if (l.event === "HWID_LOCKOUT" || l.status === "TERMINATED") statusColor = "text-red-400";
-                    if (l.event === "SUCCESS_AUTH") statusColor = "text-emerald-400";
+        function renderTerminalLogs(logs) {
+            const stream = document.getElementById('logs-terminal-stream');
+            stream.innerHTML = '';
+            if (logs.length === 0) { stream.innerHTML = `<div class="text-slate-600 italic">// Awaiting stream telemetry pipes...</div>`; return; }
+            logs.forEach(log => {
+                let color = "text-violet-400";
+                if (log.event.includes("TERMINATED") || log.event.includes("BLACK") || log.event.includes("EVADE")) color = "text-rose-500 font-bold";
+                if (log.event.includes("INITIALIZATION") || log.event.includes("UNBAN") || log.event.includes("TRIAL")) color = "text-emerald-400 font-bold";
 
-                    logElement.innerHTML = `
+                stream.innerHTML += `
+                    <div class="p-2 bg-black/40 rounded border border-violet-950/20 flex flex-col md:flex-row md:justify-between font-mono gap-1">
                         <div>
-                            <span class="${statusColor} font-bold">[${l.event}]</span>
-                            <span class="text-slate-400 text-xs">User: \`${l.username}\`</span>
-                            <p class="text-slate-500 text-[10px] mt-0.5">Target Token ID Key: \`${l.key}\`</p>
+                            <span class="text-slate-500">[${new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span class="${color}">[${log.event}]</span>
+                            <span class="text-white">User: ${log.username || '—'}</span> | <span class="text-slate-400 text-[11px]">Key: ${log.key}</span>
                         </div>
-                        <span class="text-slate-600 text-[10px] whitespace-nowrap">${new Date(l.timestamp).toLocaleTimeString()}</span>
-                    `;
-                    logsContainer.appendChild(logElement);
-                });
-
-            } catch (err) { console.error("Pipeline Sync Exception:", err); }
-        }
-
-        async function generateSystemKey(days) {
-            await fetch(`${serverTarget}/api/admin/keys/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ days })
+                        <div class="text-slate-500 text-[11px]">HWID: ${log.hwid || '—'} [${log.status}]</div>
+                    </div>
+                `;
             });
-            pullCloudDataRegistry();
         }
 
-        async function addUserToBlacklist() {
-            const robloxUserId = prompt("Specify target profile numeric Roblox User ID value to banish:");
-            const reason = prompt("Enter enforcement lockout context justification description:");
-            if (!robloxUserId) return;
+        async function launchDeepDiveInspector(uid) {
+            try {
+                const res = await fetch(`${serverTarget}/api/admin/profile/deep-dive/${uid}`);
+                const parsed = await res.json();
+                if(!parsed.success) return alert("Failed to fetch deep-dive telemetry profile.");
 
-            await fetch(`${serverTarget}/api/admin/blacklist/add`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ robloxUserId, reason })
-            });
-            pullCloudDataRegistry();
+                const data = parsed.data;
+                document.getElementById('modal-avatar').src = data.avatarUrl;
+                document.getElementById('modal-username').innerText = data.identity.username || "Unknown profile context";
+                document.getElementById('modal-uid').innerText = `Roblox ID: ${data.identity.robloxUserId}`;
+
+                const badge = document.getElementById('modal-ban-badge');
+                if(data.banStatus.active) {
+                    badge.innerText = `HARD-LOCKED: ${data.banStatus.reason}`;
+                    badge.className = "mt-2 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-500/30";
+                } else {
+                    badge.innerText = "STANDING CLEAR // SECURE PROFILE ACTIVE";
+                    badge.className = "mt-2 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30";
+                }
+
+                document.getElementById('modal-stat-handshakes').innerText = data.statistics.totalHandshakes;
+                document.getElementById('modal-stat-inits').innerText = data.statistics.totalInitializations;
+                document.getElementById('modal-stat-infractions').innerText = data.statistics.totalInfractions;
+
+                const logBox = document.getElementById('modal-logs-container');
+                logBox.innerHTML = '';
+                if(data.activityLogs.length === 0) {
+                    logBox.innerHTML = '<div class="text-slate-600 italic">// No deep-dive event tracking entries found on signature trace.</div>';
+                } else {
+                    data.activityLogs.forEach(l => {
+                        logBox.innerHTML += `<div class="p-1 border-b border-violet-950/10 font-mono"><span class="text-slate-500">[${new Date(l.timestamp).toLocaleDateString()}]</span> <span class="text-violet-400">[${l.event}]</span> Result: <span class="text-white">${l.status}</span></div>`;
+                    });
+                }
+
+                document.getElementById('deep-dive-modal').classList.remove('hidden');
+            } catch(e) { console.error(e); }
         }
 
-        async function revokeLicenseToken(key) {
-            const reason = prompt("Specify key revocation protocol trigger context:");
-            if (reason === null) return;
-            await fetch(`${serverTarget}/api/admin/keys/blacklist`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key, reason: reason || "Manual Override Action Trigger" })
-            });
-            pullCloudDataRegistry();
-        }
-
-        async function restoreLicenseToken(key) {
-            if (!confirm("Execute database restore protocol for this key token?")) return;
-            await fetch(`${serverTarget}/api/admin/keys/restore`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key })
-            });
-            pullCloudDataRegistry();
-        }
-
-        async function purgeExpiredTokens() {
-            await fetch(`${serverTarget}/api/admin/keys/purge-expired`, { method: "POST" });
-            pullCloudDataRegistry();
-        }
-
-        async function clearAuditDatabaseLogs() {
-            if (!confirm("Scrub all operational trace history arrays completely?")) return;
-            await fetch(`${serverTarget}/api/admin/logs/clear`, { method: "POST" });
-            pullCloudDataRegistry();
-        }
+        function closeDeepDiveModal() { document.getElementById('deep-dive-modal').classList.add('hidden'); }
+        async function mintToken() { const customKey = document.getElementById('custom-key').value.trim(); const durationHours = document.getElementById('key-hours').value.trim(); await fetch(`${serverTarget}/api/admin/keys/create`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customKey: customKey || null, durationHours: durationHours || "24" }) }); document.getElementById('custom-key').value = ''; document.getElementById('key-hours').value = ''; pullCloudDataRegistry(); }
+        async function submitProfileCrmNotes(robloxUserId, notes) { await fetch(`${serverTarget}/api/admin/profile/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ robloxUserId, notes }) }); pullCloudDataRegistry(); }
+        async function revokeLicenseToken(key) { const reason = prompt("Specify key revocation protocol trigger context:"); if (reason === null) return; await fetch(`${serverTarget}/api/admin/keys/blacklist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, reason: reason || "Manual Override Action Trigger" }) }); pullCloudDataRegistry(); }
+        async function restoreLicenseToken(key) { if (!confirm("Execute database restore protocol for this key token?")) return; await fetch(`${serverTarget}/api/admin/keys/restore`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }); pullCloudDataRegistry(); }
+        async function liftShadowEnforcementBan(robloxUserId) { if (!confirm(`Purge profile ${robloxUserId} from enforcement wide shadow isolation?`)) return; await fetch(`${serverTarget}/api/admin/blacklist/remove/${robloxUserId}`, { method: "DELETE" }); pullCloudDataRegistry(); }
+        async function purgeExpiredTokens() { await fetch(`${serverTarget}/api/admin/keys/purge-expired`, { method: "POST" }); pullCloudDataRegistry(); }
+        async function clearAuditDatabaseLogs() { if (!confirm("Scrub all operational trace history arrays completely?")) return; await fetch(`${serverTarget}/api/admin/logs/clear`, { method: "POST" }); pullCloudDataRegistry(); }
 
         setInterval(pullCloudDataRegistry, 5000);
         window.onload = pullCloudDataRegistry;
