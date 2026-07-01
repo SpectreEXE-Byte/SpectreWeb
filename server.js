@@ -24,15 +24,33 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "SPECTRE_SUPER_SECRET_CORE_VECTOR";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Helper: Discord Alerts
+async function dispatchSecurityAlert(title, description, color = 16711680) {
+    if (!DISCORD_WEBHOOK_URL) return;
+    try {
+        await axios.post(DISCORD_WEBHOOK_URL, {
+            embeds: [{
+                title: title,
+                description: description,
+                color: color,
+                timestamp: new Date()
+            }]
+        });
+    } catch (err) {
+        console.error("Discord Webhook Pipeline Error:", err.message);
+    }
+}
+
 // ============================================================================
 // INFRASTRUCTURE INITIALIZATION (REDIS & MONGO)
 // ============================================================================
-const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6367' });
+const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
 redisClient.on('error', err => console.error('Redis Cache Pipeline Error:', err));
 (async () => { await redisClient.connect().catch(() => console.log("⚠️ Redis offline, falling back to database.")); })();
 
@@ -97,7 +115,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ============================================================================
-// SYSTEM HEALTH MONITORING & TELEMETRY PERFORMANCE API
+// SYSTEM HEALTH MONITORING
 // ============================================================================
 app.get('/api/health', async (req, res) => {
     const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
@@ -130,6 +148,7 @@ app.get('/api/admin/metrics', authorize(['owner', 'admin', 'moderator']), async 
         const keys = await Key.find().sort({ createdAt: -1 }).lean();
         const profiles = await UserProfile.find().lean();
         const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(30).lean();
+        const blacklistCount = await ShadowBlacklist.countDocuments();
 
         const extendedKeysList = keys.map(k => {
             const profile = profiles.find(p => p.robloxUserId === k.assignedUserId);
@@ -144,12 +163,13 @@ app.get('/api/admin/metrics', authorize(['owner', 'admin', 'moderator']), async 
             totalKeys: keys.length,
             activeKeys: keys.filter(k => !k.isBlacklisted).length,
             blacklistedKeys: keys.filter(k => k.isBlacklisted).length,
+            hwidBlocks: blacklistCount,
             recentLogs: logs,
             keysList: extendedKeysList
         };
 
         if (redisClient.isOpen) {
-            await redisClient.set('spectre_metrics', JSON.stringify(dataPayload), { EX: 10 }); // Cache for 10 seconds
+            await redisClient.set('spectre_metrics', JSON.stringify(dataPayload), { EX: 5 }); // Cache for 5 seconds
         }
 
         return res.status(200).json(dataPayload);
@@ -160,7 +180,7 @@ app.get('/api/admin/metrics', authorize(['owner', 'admin', 'moderator']), async 
 
 // Advanced Query Pipeline: Paginated Search and Advanced Filtering
 app.get('/api/admin/logs/search', authorize(['owner', 'admin', 'moderator']), async (req, res) => {
-    const { term, event, status, page = 1, limit = 15 } = req.query;
+    const { term, event, page = 1, limit = 15 } = req.query;
     let queryConditions = {};
 
     if (term) {
@@ -171,7 +191,6 @@ app.get('/api/admin/logs/search', authorize(['owner', 'admin', 'moderator']), as
         ];
     }
     if (event) queryConditions.event = event;
-    if (status) queryConditions.status = status;
 
     const logs = await AuditLog.find(queryConditions)
         .sort({ timestamp: -1 })
@@ -184,7 +203,7 @@ app.get('/api/admin/logs/search', authorize(['owner', 'admin', 'moderator']), as
     res.status(200).json({ logs, totalMatches, pages: Math.ceil(totalMatches / limit) });
 });
 
-// Profile Deep Dive (Keep client runtime functionality fully operational)
+// Profile Deep Dive 
 app.get('/api/admin/profile/deep-dive/:robloxUserId', authorize(['owner', 'admin', 'moderator']), async (req, res) => {
     const targetId = String(req.params.robloxUserId);
     const [profile, activeKeys, shadowBan] = await Promise.all([
@@ -218,7 +237,7 @@ app.post('/api/admin/keys/create', authorize(['owner', 'admin']), async (req, re
 
     const newKey = await Key.create({ key: generatedKey, expiresAt: expirationTime });
     
-    io.emit('notification', { type: 'success', message: `New key minted: ${generatedKey}` });
+    io.emit('notification', { type: 'success', message: `New license minted: ${generatedKey}` });
     res.status(200).json({ success: true, key: newKey });
 });
 
@@ -228,32 +247,89 @@ app.post('/api/admin/keys/blacklist', authorize(['owner', 'admin']), async (req,
     
     if (target?.assignedUserId) {
         await ShadowBlacklist.findOneAndUpdate({ robloxUserId: target.assignedUserId }, { robloxUserId: target.assignedUserId, hwid: target.assignedHWID, reason }, { upsert: true });
+        await AuditLog.create({
+            event: "SHADOW_EVADE_BLOCK",
+            key: key,
+            username: `UID: ${target.assignedUserId}`,
+            hwid: target.assignedHWID || "N/A",
+            status: "ENFORCED"
+        });
+        await dispatchSecurityAlert("CRITICAL ENFORCEMENT", `Key **${key}** has been banned. User \`${target.assignedUserId}\` shadow-blacklisted. Context: ${reason}`);
     }
 
-    io.emit('notification', { type: 'error', message: `License revoked & shadow ban enforced: ${key}` });
+    io.emit('notification', { type: 'error', message: `License revoked & system shadow block enforced: ${key}` });
     res.status(200).json({ success: true, message: "Token suspended across clusters." });
 });
 
-// Verification Gateway Protocol Pipeline (Preserving existing V2 runtime interaction model)
-app.post('/api/verify', async (req, res) => {
-    // Keep internal legacy logic matching model schemas intact.
-    // Inject dynamic push hooks at crucial checkpoints:
-    const { key, username, robloxUserId, hwid } = req.body;
-    
-    // Example: Trigger critical socket notifications to the UI dashboard on structural breach attempts
-    const shadowMatch = await ShadowBlacklist.findOne({ $or: [{ robloxUserId: String(robloxUserId) }, { hwid }] });
-    if (shadowMatch) {
-        io.emit('notification', { type: 'alert', message: `Intrusion block on user: ${username}` });
-        return res.status(403).json({ success: false, message: "HARDWARE ACCESS SUSPENDED." });
-    }
-    
-    // Complete verification pipeline block proceeds as structured inside current architecture profiles...
-    res.status(200).json({ success: true, message: "Handshake verified." });
+// Housekeeping utility endpoints
+app.post('/api/admin/keys/purge-expired', authorize(['owner']), async (req, res) => {
+    try {
+        const output = await Key.deleteMany({ expiresAt: { $lt: new Date() } });
+        io.emit('notification', { type: 'success', message: `Purged ${output.deletedCount} old expired keys.` });
+        return res.status(200).json({ success: true, message: `Purged ${output.deletedCount} old expired keys.` });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-// ============================================================================
-// LIFECYCLE INITIALIZATION
-// ============================================================================
+app.post('/api/admin/logs/clear', authorize(['owner']), async (req, res) => {
+    try {
+        await AuditLog.deleteMany({});
+        io.emit('notification', { type: 'error', message: "Audit logs streams cleared structural purge." });
+        return res.status(200).json({ success: true, message: "Audit logs streams cleared." });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Verification Gateway Protocol Pipeline
+app.post('/api/verify', async (req, res) => {
+    const { key, username, robloxUserId, hwid, executor } = req.body;
+    
+    try {
+        const shadowMatch = await ShadowBlacklist.findOne({ $or: [{ robloxUserId: String(robloxUserId) }, { hwid }] });
+        if (shadowMatch) {
+            await AuditLog.create({ event: "SHADOW_EVADE_BLOCK", key: key || "UNKNOWN", username, hwid, status: "DENIED" });
+            io.emit('notification', { type: 'error', message: `Intrusion block triggered for user: ${username}` });
+            return res.status(403).json({ success: false, message: "HARDWARE ACCESS SUSPENDED." });
+        }
+
+        const keyDoc = await Key.findOne({ key });
+        if (!keyDoc) {
+            await AuditLog.create({ event: "INITIALIZATION", key: key || "BAD_KEY", username, hwid, status: "INVALID" });
+            return res.status(404).json({ success: false, message: "Key registry token not found." });
+        }
+
+        if (keyDoc.isBlacklisted) {
+            return res.status(403).json({ success: false, message: "License footprint revoked by administration." });
+        }
+
+        if (new Date() > keyDoc.expiresAt) {
+            return res.status(403).json({ success: false, message: "Licensing temporal frame expired." });
+        }
+
+        // Bind user details if unassigned
+        if (!keyDoc.assignedUserId) {
+            keyDoc.assignedUserId = String(robloxUserId);
+            keyDoc.assignedUser = username;
+            keyDoc.assignedHWID = hwid;
+            keyDoc.assignedExecutor = executor;
+            keyDoc.activatedAt = new Date();
+            await keyDoc.save();
+
+            await UserProfile.findOneAndUpdate(
+                { robloxUserId: String(robloxUserId) },
+                { username, lastHwid: hwid, $addToSet: { hwidHistory: hwid } },
+                { upsert: true }
+            );
+        } else if (keyDoc.assignedUserId !== String(robloxUserId)) {
+            await AuditLog.create({ event: "HANDSHAKE", key, username, hwid, status: "HWID_MISMATCH" });
+            return res.status(403).json({ success: false, message: "Hardware key mapping mismatch." });
+        }
+
+        await AuditLog.create({ event: "HANDSHAKE", key, username, hwid, status: "SUCCESS" });
+        return res.status(200).json({ success: true, message: "Handshake verified." });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 io.on('connection', (socket) => {
     console.log(`📡 Secure socket data link established: ${socket.id}`);
 });

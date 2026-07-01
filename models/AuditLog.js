@@ -1,10 +1,14 @@
-// High-performance search and filtering indexes
-keySchema.index({ assignedUserId: 1, isBlacklisted: 1 });
-keySchema.index({ key: 1 }, { unique: true });
+const mongoose = require('mongoose');
 
-// Compound text indexing for global search functionality
-userProfileSchema.index({ username: "text", robloxUserId: "text" });
+const logSchema = new mongoose.Schema({
+    event: { type: String, required: true }, // INITIALIZATION, HANDSHAKE, SHADOW_EVADE_BLOCK
+    key: { type: String, required: true },
+    username: { type: String, required: true },
+    hwid: { type: String, required: true },
+    status: { type: String, required: true }, // SUCCESS, INVALID, DENIED
+    timestamp: { type: Date, default: Date.now }
+});
 
-// Compound log aggregation and time-series optimizations
 logSchema.index({ timestamp: -1, event: 1 });
-shadowBlacklistSchema.index({ robloxUserId: 1, hwid: 1 });
+
+module.exports = mongoose.model('AuditLog', logSchema);

@@ -9,7 +9,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Theme Variables & Bases */
         .light-theme { background-color: #f4f4f5; color: #18181b; }
         .light-theme .cyber-panel { background: rgba(255, 255, 255, 0.9); border-color: #e4e4e7; color: #18181b; }
         .light-theme header { background: #ffffff; border-color: #e4e4e7; }
@@ -19,14 +18,13 @@
         .light-theme .text-slate-400 { color: #3f3f46 !important; }
         .light-theme .text-violet-300 { color: #6d28d9 !important; }
 
-        .dark-theme { background-color: #030305; color: #444444; }
+        .dark-theme { background-color: #030305; color: #383838; }
         .dark-theme .cyber-panel { background: rgba(8, 8, 12, 0.95); border-color: rgba(139, 92, 246, 0.15); }
         
         body { font-family: 'Fira Code', monospace; transition: background 0.3s, color 0.3s; }
         .cyber-border { border: 1px solid rgba(139, 92, 246, 0.15); }
         .tab-active { border-color: #8b5cf6; color: #ffffff; background: rgba(139, 92, 246, 0.08); }
         .matrix-bg { background-image: linear-gradient(rgba(139, 92, 246, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.01) 1px, transparent 1px); background-size: 24px 24px; }
-        .sidebar-link { cursor: pointer; transition: 0.2s; }
     </style>
 </head>
 <body class="matrix-bg dark-theme text-slate-300 min-h-screen flex flex-col">
@@ -197,7 +195,6 @@
             setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 4500);
         }
 
-        // Live Socket Data Sync Pipe Trigger
         socket.on('notification', data => { 
             pushRealtimeNotificationToast(data.type, data.message); 
             pullCloudRegistryDataMetrics(); 
@@ -262,6 +259,7 @@
             document.getElementById('stat-total').innerText = String(data.totalKeys || 0).padStart(2, '0');
             document.getElementById('stat-active').innerText = String(data.activeKeys || 0).padStart(2, '0');
             document.getElementById('stat-revoked').innerText = String(data.blacklistedKeys || 0).padStart(2, '0');
+            document.getElementById('stat-hwid').innerText = String(data.hwidBlocks || 0).padStart(2, '0');
             
             localKeysCache = data.keysList || [];
             renderLicenseTable(localKeysCache);
@@ -281,7 +279,7 @@
                         <td class="p-4 flex items-center gap-3">
                             <img src="${k.avatarUrl}" class="w-8 h-8 rounded-full border border-violet-500/20 bg-black/50" onerror="this.src='https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png'">
                             <div>
-                                <div class="text-white font-bold">${k.assignedUserId ? 'Cluster Sync User' : '—'}</div>
+                                <div class="text-white font-bold">${k.assignedUser ? k.assignedUser : '—'}</div>
                                 <div class="text-[10px] text-slate-500 font-mono">${k.assignedUserId || 'UNBOUND'}</div>
                             </div>
                         </td>
