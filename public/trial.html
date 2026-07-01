@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPECTRE // EVALUATION ACCESS PORTAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Fira Code', monospace; background-color: #030305; }
+        .cyber-border { border: 1px solid rgba(139, 92, 246, 0.15); }
+        .cyber-panel { background: rgba(8, 8, 12, 0.95); backdrop-filter: blur(16px); }
+        .matrix-bg { background-image: linear-gradient(rgba(139, 92, 246, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.01) 1px, transparent 1px); background-size: 24px 24px; }
+    </style>
+</head>
+<body class="matrix-bg text-slate-300 min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-md cyber-panel cyber-border rounded-lg p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent"></div>
+        
+        <div class="mb-6 text-center">
+            <h1 class="text-white font-bold text-lg tracking-wider">🔮 SPECTRE.EXE // ACCESS PORTAL</h1>
+            <p class="text-xs text-slate-500 mt-1">SECURE SEED IDENTIFICATION ENGINE</p>
+        </div>
+
+        <div id="loginState" class="text-center py-4">
+            <p class="text-sm text-slate-400 mb-6">In order to register for a unique 7-Day trial execution key token, your identity profile must be validated via Discord OAuth channel parameters.</p>
+            <a href="/api/auth/login" class="inline-block bg-violet-600 hover:bg-violet-500 text-white font-medium text-xs py-3 px-6 rounded border border-violet-400 transition-all shadow-md shadow-violet-900/20 tracking-wider">
+                LINK DISCORD APPLICATION IDENTITY
+            </a>
+        </div>
+
+        <div id="claimsState" class="hidden space-y-4">
+            <div class="p-3 bg-slate-900/40 rounded border border-slate-800/60 text-xs flex justify-between items-center">
+                <span class="text-slate-500">Linked Account Trace:</span>
+                <span id="accountTag" class="text-violet-400 font-medium">Unknown#0000</span>
+            </div>
+
+            <p class="text-xs text-slate-400 leading-relaxed">Verification link parameters confirmed. Pressing the pipeline execution matrix below binds a new validation pass to your local container framework lasting exactly 168 hours.</p>
+
+            <button id="claimActionBtn" class="w-full bg-slate-900 hover:bg-violet-950/20 text-violet-400 border border-violet-500/30 hover:border-violet-500 text-xs font-bold py-3 rounded transition-all tracking-wider">
+                EXECUTE KEY EXTRACTION SEQUENCE
+            </button>
+
+            <div id="outputDisplay" class="hidden p-4 bg-black/40 rounded border border-emerald-500/30 text-center space-y-2">
+                <span class="text-[10px] text-emerald-400 font-bold block tracking-widest">REGISTRATION COMPLETE SUCCESS</span>
+                <div id="tokenString" class="text-white text-xs select-all bg-slate-900 p-2 rounded border border-slate-800 font-mono tracking-wide break-all">SPECTRE-TRIAL-KEY</div>
+                <span class="text-[10px] text-slate-500 block">Copy the key token above and paste it directly into the Roblox boot window.</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const discordId = urlParams.get('uid');
+        const discordTag = urlParams.get('tag');
+
+        const loginState = document.getElementById('loginState');
+        const claimsState = document.getElementById('claimsState');
+        const accountTag = document.getElementById('accountTag');
+        const claimActionBtn = document.getElementById('claimActionBtn');
+        const outputDisplay = document.getElementById('outputDisplay');
+        const tokenString = document.getElementById('tokenString');
+
+        // Check if redirected with authentication URL keys
+        if (discordId && discordTag) {
+            loginState.classList.add('hidden');
+            claimsState.classList.remove('hidden');
+            accountTag.innerText = decodeURIComponent(discordTag);
+        }
+
+        claimActionBtn.addEventListener('click', async () => {
+            claimActionBtn.disabled = true;
+            claimActionBtn.innerText = "QUERYING SYSTEM CORE LAYERS...";
+
+            try {
+                const response = await fetch('/api/trial/claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ discordId, discordTag: decodeURIComponent(discordTag) })
+                });
+
+                const payloadData = await response.json();
+
+                if (payloadData.success) {
+                    tokenString.innerText = payloadData.key;
+                    outputDisplay.classList.remove('hidden');
+                    claimActionBtn.innerText = "ACCESS TOKEN LINK DISPATCHED";
+                    claimActionBtn.className = "w-full bg-emerald-950/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold py-3 rounded cursor-default tracking-wider";
+                } else {
+                    alert(`ACCESS EXCLUSION TRIGGERED: ${payloadData.message}`);
+                    claimActionBtn.disabled = false;
+                    claimActionBtn.innerText = "EXECUTE KEY EXTRACTION SEQUENCE";
+                }
+            } catch (err) {
+                alert("Network matrix feedback link connection timeout.");
+                claimActionBtn.disabled = false;
+                claimActionBtn.innerText = "EXECUTE KEY EXTRACTION SEQUENCE";
+            }
+        });
+    </script>
+</body>
+</html>
