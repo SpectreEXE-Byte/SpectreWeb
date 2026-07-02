@@ -1,21 +1,38 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
+// Force dotenv to find your configuration variables inside the absolute application container runtime directory
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const mongoURI = process.env.MONGO_URI;
 
 app.use(express.json());
 app.use(cors());
 
-// Connect securely to your persistent MongoDB infrastructure
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('>>> Spectre Advanced Central Matrix Cluster Connected.'))
-    .catch(err => console.error('!!! Database Cluster Connection Failure:', err));
+// Diagnostic configuration check before firing up the connection pipeline
+if (!mongoURI) {
+    console.error('\n!!! CRITICAL CONFIGURATION FAULT: process.env.MONGO_URI is entirely missing or undefined inside your runtime layout.');
+} else {
+    console.log('\n⏳ Initializing cluster secure authorization handshake pipeline...');
+    
+    // Connect securely to your persistent MongoDB infrastructure
+    mongoose.connect(mongoURI)
+        .then(() => console.log('\n>>> SUCCESS: Spectre Advanced Central Matrix Cluster Connected Smoothly.'))
+        .catch(err => {
+            console.error('\n!!! CRITICAL ERROR: Database Cluster Connection Failure Detected!');
+            console.error('Explicit Node Driver Details Context:\n', err);
+        });
+}
+
+// Active connection session monitoring listeners
+mongoose.connection.on('error', err => console.error('!!! ACTIVE NETWORK LOOP ERROR:', err));
+mongoose.connection.on('disconnected', () => console.warn('⚠️ WARNING: Matrix Data Cluster connection dropped from target system.'));
 
 // ============================================================================
 // DATABASE DATA SCHEMAS (MONGODB DATA STRUCTURES)
@@ -35,382 +52,225 @@ const keySchema = new mongoose.Schema({
 keySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Automates pruning if needed
 const Key = mongoose.model('Key', keySchema);
 
-const userProfileSchema = new mongoose.Schema({
-    username: { type: String, required: true },
-    robloxUserId: { type: String, required: true, unique: true },
-    adminNotes: { type: String, default: "" },
-    lastSeenHWID: { type: String, default: "" },
-    lastSeenExecutor: { type: String, default: "" },
-    updatedAt: { type: Date, default: Date.now }
+const hwidBanSchema = new mongoose.Schema({
+    hwid: { type: String, required: true, unique: true },
+    reason: { type: String, default: "Violation of usage security protocols." },
+    bannedAt: { type: Date, default: Date.now }
 });
-const UserProfile = mongoose.model('UserProfile', userProfileSchema);
+const HWIDBan = mongoose.model('HWIDBan', hwidBanSchema);
 
 const shadowBlacklistSchema = new mongoose.Schema({
     robloxUserId: { type: String, required: true, unique: true },
-    hwid: { type: String, required: true },
-    reason: { type: String, default: "Evulsion Control Isolation Trigger" },
+    robloxUsername: { type: String },
+    reason: { type: String, default: "Security Enforcement Flagged." },
     flaggedAt: { type: Date, default: Date.now }
 });
 const ShadowBlacklist = mongoose.model('ShadowBlacklist', shadowBlacklistSchema);
 
-const logSchema = new mongoose.Schema({
-    event: String,
-    key: String,
-    username: String,
-    hwid: String,
-    status: String,
+const auditLogSchema = new mongoose.Schema({
+    key: { type: String },
+    robloxUser: { type: String },
+    robloxUserId: { type: String },
+    executor: { type: String },
+    action: { type: String, required: true },
+    status: { type: String, required: true },
+    details: { type: String },
     timestamp: { type: Date, default: Date.now }
 });
-const AuditLog = mongoose.model('AuditLog', logSchema);
+const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
-// New Collection: Tracks unique Discord accounts that have claimed an evaluation pass token
-const trialClaimTrackerSchema = new mongoose.Schema({
-    discordId: { type: String, required: true, unique: true },
-    discordTag: { type: String, required: true },
-    claimedAt: { type: Date, default: Date.now }
-});
-const TrialClaim = mongoose.model('TrialClaim', trialClaimTrackerSchema);
-
-// ============================================================================
-// SYSTEM UTILITIES / HELPER CHANNELS
-// ============================================================================
-
-async function dispatchSecurityAlert(title, description, color = 10027263) {
+// Helper function to securely dispatch telemetry payloads over Discord pipelines
+async function sendDiscordWebhook(title, description, color = 0x00FF00, fields = []) {
     if (!DISCORD_WEBHOOK_URL) return;
     try {
         await axios.post(DISCORD_WEBHOOK_URL, {
             embeds: [{
-                title: `🛡️ SPECTRE HUB // ${title}`,
-                description,
-                color,
-                timestamp: new Date(),
-                footer: { text: "SPECTRE ENFORCEMENT ENGINE" }
+                title: title,
+                description: description,
+                color: color,
+                fields: fields,
+                footer: { text: "Spectre Matrix Intelligence Engine v43.0" },
+                timestamp: new Date()
             }]
         });
     } catch (err) {
-        console.error("Discord Webhook Forwarding Fault:", err.message);
+        console.error("Failed to forward telemetry context bundle to Webhook pipeline:", err.message);
     }
 }
 
-function fetchRobloxAvatarUrl(userId) {
-    if (!userId || userId === "0" || userId === "—") {
-        return "https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png";
-    }
-    return `https://www.roblox.com/headshot-thumbnail/image?userId=${userId}&width=150&height=150&format=png`;
+// Helper to calculate expiration matrices
+function getExpirationDate(durationStr) {
+    const amount = parseInt(durationStr);
+    const unit = durationStr.replace(/[0-9]/g, '').trim().toLowerCase();
+    const now = new Date();
+
+    if (unit === 'm' || unit === 'min' || unit === 'minute' || unit === 'minutes') return new Date(now.getTime() + amount * 60000);
+    if (unit === 'h' || unit === 'hr' || unit === 'hour' || unit === 'hours') return new Date(now.getTime() + amount * 3600000);
+    if (unit === 'd' || unit === 'day' || unit === 'days') return new Date(now.getTime() + amount * 86400000);
+    if (unit === 'w' || unit === 'week' || unit === 'weeks') return new Date(now.getTime() + amount * 7 * 86400000);
+    
+    return new Date(now.getTime() + 86400000); // Standard fallback parameters (24 Hours)
 }
 
 // ============================================================================
-// OFFICIAL DISCORD OAUTH2 AUTHENTICATION CONTROLLER ENDPOINTS
+// ENDPOINT INFRASTRUCTURE & ROUTING MANAGEMENT
 // ============================================================================
 
-// Route 1: Trigger secure login redirect sequence out to Discord OAuth API gateway
-app.get('/api/auth/login', (req, res) => {
-    const redirectUrl = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}&response_type=code&scope=identify`;
-    res.redirect(redirectUrl);
-});
+app.post('/api/keys/validate', async (req, res) => {
+    const { key, hwid, robloxUser, robloxUserId, executor } = req.body;
 
-// Route 2: Intercept login token payload code from the authorization provider callback
-app.get('/api/auth/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.send("<h3>OAuth verification handshake cancelled by developer application parameters.</h3>");
-
-    try {
-        // Exchange grant code for dynamic token access sequence
-        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
-            client_id: process.env.DISCORD_CLIENT_ID,
-            client_secret: process.env.DISCORD_CLIENT_SECRET,
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: process.env.DISCORD_REDIRECT_URI,
-        }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-
-        const accessToken = tokenResponse.data.access_token;
-
-        // Query the Discord API securely for profile account properties
-        const userResponse = await axios.get('https://discord.com/api/users/@me', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-
-        const { id, username, discriminator } = userResponse.data;
-        const completeTag = discriminator !== "0" ? `${username}#${discriminator}` : username;
-
-        // Redirect user safely back to the user interface panel passing unique identifier queries
-        res.redirect(`/trial-portal?uid=${id}&tag=${encodeURIComponent(completeTag)}`);
-    } catch (err) {
-        console.error("OAuth Exchange Telemetry Exception:", err.response ? err.response.data : err.message);
-        res.status(500).send("<h3>OAuth Handshake Security Verification Token Integrity Broken. Try again later.</h3>");
-    }
-});
-
-// Route 3: Validates structural requirements and generates a unique evaluation key
-app.post('/api/trial/claim', async (req, res) => {
-    const { discordId, discordTag } = req.body;
-
-    if (!discordId || !discordTag) {
-        return res.status(400).json({ success: false, message: "Missing required identification metadata." });
+    if (!key || !hwid) {
+        return res.status(400).json({ success: false, message: "Missing essential validation handshake components." });
     }
 
     try {
-        // Check if this explicit account identifier already claimed a license key token
-        const alreadyClaimed = await TrialClaim.findOne({ discordId: String(discordId) });
-        if (alreadyClaimed) {
-            return res.status(403).json({ success: false, message: "ACCOUNT EXPIRED. LIMIT 1 EVALUATION KEY PER USER PROFILE." });
+        const isBanned = await HWIDBan.findOne({ hwid: String(hwid) });
+        if (isBanned) {
+            await new AuditLog({ key, robloxUser, robloxUserId, executor, action: "VALIDATION_ATTEMPT", status: "BLOCKED", details: `Hardware Blacklist Encountered. Reason: ${isBanned.reason}` }).save();
+            return res.status(403).json({ success: false, message: `Access Denied: This workstation hardware hash has been banned. Reason: ${isBanned.reason}` });
         }
 
-        // Setup unique evaluation validation array token parameters 
-        const tokenSequence = `SPECTRE-TRIAL-${require('crypto').randomBytes(6).toString('hex').toUpperCase()}`;
-        const activeSpanLimit = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)); // Exactly 7 Days Out
-
-        // Write live evaluation pass key parameters inside central Roblox mapping array
-        await Key.create({
-            key: tokenSequence,
-            expiresAt: activeSpanLimit,
-            blacklistReason: "Evaluation Trial Node Bound Only"
-        });
-
-        // Set restriction mapping flag blocking repeated generations
-        await TrialClaim.create({
-            discordId: String(discordId),
-            discordTag: discordTag
-        });
-
-        // Broadcast analytical pipeline updates out to central operations log channel
-        await AuditLog.create({
-            event: "TRIAL_GEN",
-            key: tokenSequence,
-            username: discordTag,
-            hwid: `DISCORD_ID: ${discordId}`,
-            status: "SUCCESS"
-        });
-
-        await dispatchSecurityAlert("🔮 TRIAL ACCESS GENERATED", `**Operator Handle:** \`${discordTag}\`\n**Identity Record:** \`${discordId}\`\n**Assigned Key Ring:** \`${tokenSequence}\``, 9133302);
-
-        return res.status(200).json({ success: true, key: tokenSequence });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-// ============================================================================
-// CLIENT ENDPOINT GATEWAY: RUNTIME TELEMETRY VERIFICATION OVERSEE
-// ============================================================================
-
-app.post('/api/verify', async (req, res) => {
-    const { key, username, robloxUserId, hwid, executor } = req.body;
-    if (!key || !robloxUserId) {
-        return res.status(400).json({ success: false, message: "Required payload markers absent." });
-    }
-
-    try {
-        const shadowMatch = await ShadowBlacklist.findOne({
-            $or: [{ robloxUserId: String(robloxUserId) }, { hwid: hwid }]
-        });
-
-        if (shadowMatch) {
-            await Key.findOneAndUpdate({ key }, { 
-                isBlacklisted: true, 
-                blacklistReason: `SHADOW EXCLUSION CODES TRIGGERED: Tied to ban register (${shadowMatch.reason})` 
-            });
-            await AuditLog.create({ event: "SHADOW_EVADE_BLOCK", key, username, hwid, status: "SHUTDOWN" });
-            
-            await dispatchSecurityAlert("SHADOW BAN EVASION TERMINATED", 
-                `**User:** \`${username}\` (${robloxUserId})\n**Key Attempted:** \`${key}\` *(Burned)*\n**Reason:** Hardlocked user identity profile footprint match.`, 16711680);
-            
-            return res.status(403).json({ success: false, message: "HARDWARE ACCESS SUSPENDED. TERMINATION CODES PERSISTENT." });
-        }
-
-        const targetKey = await Key.findOne({ key });
-        if (!targetKey) return res.status(404).json({ success: false, message: "License record untracked." });
-        if (targetKey.isBlacklisted) return res.status(403).json({ success: false, message: `SUSPENDED: ${targetKey.blacklistReason}` });
-        if (targetKey.expiresAt && new Date() > targetKey.expiresAt) return res.status(403).json({ success: false, message: "License key token runtime duration has expired." });
-
-        await UserProfile.findOneAndUpdate(
-            { robloxUserId: String(robloxUserId) },
-            { username, lastSeenHWID: hwid, lastSeenExecutor: executor, updatedAt: new Date() },
-            { upsert: true, new: true }
-        );
-
-        if (!targetKey.assignedUser && !targetKey.assignedHWID) {
-            targetKey.assignedUser = username;
-            targetKey.assignedUserId = String(robloxUserId);
-            targetKey.assignedHWID = hwid;
-            targetKey.assignedExecutor = executor;
-            targetKey.activatedAt = new Date();
-            await targetKey.save();
-
-            await AuditLog.create({ event: "INITIALIZATION", key, username, hwid, status: "SUCCESS" });
-            return res.status(200).json({ success: true, message: "License successfully registered." });
-        }
-
-        let infractions = [];
-        if (targetKey.assignedUserId !== String(robloxUserId)) infractions.push(`User account mismatch (${targetKey.assignedUser} vs ${username})`);
-        if (targetKey.assignedHWID !== hwid) infractions.push("Hardware variance token split");
-
-        if (infractions.length > 0) {
-            const reason = infractions.join(" | ");
-            targetKey.isBlacklisted = true;
-            targetKey.blacklistReason = `Automated Security Lockdown: ${reason}`;
-            await targetKey.save();
-
-            await ShadowBlacklist.findOneAndUpdate(
-                { robloxUserId: String(robloxUserId) },
-                { robloxUserId: String(robloxUserId), hwid, reason: `Compromised footprint context usage: ${reason}` },
-                { upsert: true }
-            );
-
-            await AuditLog.create({ event: "BLACKLIST_AUTO", key, username, hwid, status: "TERMINATED" });
-            return res.status(403).json({ success: false, message: "TAMPER ATTACK HARDBOUND PIN DISCOVERED. ACCOUNT BLACKLISTED." });
-        }
-
-        await AuditLog.create({ event: "HANDSHAKE", key, username, hwid, status: "PASS" });
-        return res.status(200).json({ success: true, message: "Handshake verified." });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: "Verification pipeline cluster fault." });
-    }
-});
-
-// ============================================================================
-// ADMINISTRATION CONTROL INTERACTION CHANNELS
-// ============================================================================
-
-app.get('/api/admin/metrics', async (req, res) => {
-    try {
-        const keys = await Key.find().sort({ createdAt: -1 }).lean();
-        const profiles = await UserProfile.find().lean();
-        const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(100).lean();
-        const trialsIssuedCount = await TrialClaim.countDocuments();
-
-        const extendedKeysList = keys.map(k => {
-            const profile = profiles.find(p => p.robloxUserId === k.assignedUserId);
-            return {
-                ...k,
-                avatarUrl: fetchRobloxAvatarUrl(k.assignedUserId),
-                adminNotes: profile ? profile.adminNotes : "",
-                lastSeen: profile ? profile.updatedAt : null
-            };
-        });
-
-        // Generate distribution rates over time dynamically for Analytics Chart
-        const hourlyTimeline = {};
-        logs.forEach(l => {
-            if(l.timestamp) {
-                const hourMarker = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                hourlyTimeline[hourMarker] = (hourlyTimeline[hourMarker] || 0) + 1;
+        if (robloxUserId) {
+            const isShadowed = await ShadowBlacklist.findOne({ robloxUserId: String(robloxUserId) });
+            if (isShadowed) {
+                await new AuditLog({ key, robloxUser, robloxUserId, executor, action: "VALIDATION_ATTEMPT", status: "SHADOW_BLOCKED", details: "Profile tracking parameters activated." }).save();
+                return res.status(403).json({ success: false, message: "Access Denied: Operational clearance has been administrative revoked." });
             }
-        });
+        }
 
-        return res.status(200).json({
-            totalKeys: keys.length,
-            activeKeys: keys.filter(k => !k.isBlacklisted).length,
-            blacklistedKeys: keys.filter(k => k.isBlacklisted).length,
-            trialsIssued: trialsIssuedCount, // Shared analytics context update
-            recentLogs: logs.slice(0, 20),
-            keysList: extendedKeysList,
-            chartTimeline: Object.keys(hourlyTimeline).slice(-7),
-            chartData: Object.values(hourlyTimeline).slice(-7)
-        });
+        const keyData = await Key.findOne({ key: String(key) });
+        if (!keyData) {
+            return res.status(404).json({ success: false, message: "The cryptographic authorization sequence provided is invalid." });
+        }
+
+        if (keyData.isBlacklisted) {
+            return res.status(403).json({ success: false, message: `Access Revoked: Key blacklisted. Reason: ${keyData.blacklistReason}` });
+        }
+
+        const currentTime = new Date();
+        if (currentTime > keyData.expiresAt) {
+            return res.status(403).json({ success: false, message: "Access Expired: This allocation cycle has already terminated." });
+        }
+
+        if (!keyData.assignedHWID) {
+            keyData.assignedHWID = String(hwid);
+            keyData.assignedUser = robloxUser || "Unknown Native";
+            keyData.assignedUserId = robloxUserId ? String(robloxUserId) : "0";
+            keyData.assignedExecutor = executor || "Generic Shell";
+            keyData.activatedAt = currentTime;
+            await keyData.save();
+
+            await new AuditLog({ key, robloxUser, robloxUserId, executor, action: "KEY_ACTIVATION", status: "SUCCESS", details: `Successfully provisioned hardware locks to target workstation.` }).save();
+
+            await sendDiscordWebhook("🔐 Operational Allocation Lock Set", `Cryptographic sequence successfully verified and localized down.`, 0x00FF00, [
+                { name: "Key", value: `\`\`\`${key}\`\`\`` },
+                { name: "User Identity", value: `${robloxUser} (${robloxUserId})`, inline: true },
+                { name: "Executor Shell", value: executor || "N/A", inline: true },
+                { name: "Hardware Reference (HWID)", value: `\`\`\`${hwid}\`\`\`` }
+            ]);
+
+            return res.status(200).json({ success: true, message: "Authorization parameters synchronized successfully.", expiresAt: keyData.expiresAt });
+        }
+
+        if (keyData.assignedHWID !== String(hwid)) {
+            await new AuditLog({ key, robloxUser, robloxUserId, executor, action: "VALIDATION_ATTEMPT", status: "HARDWARE_MISMATCH", details: `Expected: ${keyData.assignedHWID} | Provided: ${hwid}` }).save();
+            return res.status(403).json({ success: false, message: "Security Integrity Failure: Hardware blueprint configuration mismatch." });
+        }
+
+        return res.status(200).json({ success: true, message: "Clearance accepted.", expiresAt: keyData.expiresAt });
+
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// PROFILE DEEP DIVE: Fetch all details, metrics, logs, historical context, and bans on profile focus
-app.get('/api/admin/profile/deep-dive/:robloxUserId', async (req, res) => {
+// ============================================================================
+// ADMINISTRATIVE UTILITIES PANEL ROUTING
+// ============================================================================
+
+app.post('/api/admin/keys/generate', async (req, res) => {
+    const { prefix, duration, notes } = req.body;
+    if (!duration) return res.status(400).json({ success: false, error: "Allocation cycle metrics must be declared explicitly." });
+
     try {
-        const targetId = String(req.params.robloxUserId);
+        const generatedKey = `${prefix || 'NX'}-${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+        const expirationTimestamp = getExpirationDate(duration);
 
-        const [profile, activeKeys, shadowBan] = await Promise.all([
-            UserProfile.findOne({ robloxUserId: targetId }).lean(),
-            Key.find({ assignedUserId: targetId }).sort({ expiresAt: -1 }).lean(),
-            ShadowBlacklist.findOne({ robloxUserId: targetId }).lean()
-        ]);
-
-        const associatedKeyStrings = activeKeys.map(k => k.key);
-        const logSearchConditions = [{ key: { $in: associatedKeyStrings } }];
-        if (profile && profile.username) {
-            logSearchConditions.push({ username: profile.username });
-        }
-
-        const comprehensiveLogs = await AuditLog.find({ $or: logSearchConditions })
-            .sort({ timestamp: -1 })
-            .lean();
-
-        const statistics = {
-            totalHandshakes: comprehensiveLogs.filter(l => l.event === "HANDSHAKE" && l.status === "PASS").length,
-            totalInitializations: comprehensiveLogs.filter(l => l.event === "INITIALIZATION").length,
-            totalInfractions: comprehensiveLogs.filter(l => l.event === "BLACKLIST_AUTO" || l.event === "SHADOW_EVADE_BLOCK").length
-        };
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                identity: profile || { robloxUserId: targetId, username: "Unknown / Unsaved" },
-                avatarUrl: fetchRobloxAvatarUrl(targetId),
-                banStatus: shadowBan ? { active: true, reason: shadowBan.reason, flaggedAt: shadowBan.flaggedAt } : { active: false },
-                associatedKeys: activeKeys,
-                activityLogs: comprehensiveLogs,
-                statistics
-            }
+        const newKeyEntry = new Key({
+            key: generatedKey,
+            expiresAt: expirationTimestamp
         });
+        await newKeyEntry.save();
+
+        return res.status(201).json({ success: true, key: generatedKey, expiresAt: expirationTimestamp });
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-app.post('/api/admin/keys/create', async (req, res) => {
+app.get('/api/admin/keys', async (req, res) => {
     try {
-        const { customKey, durationHours } = req.body;
-        const hours = Number(durationHours || 24);
-        const generatedKey = customKey ? customKey.toUpperCase() : "SPECTRE-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-        const expirationTime = new Date(Date.now() + (hours * 60 * 60 * 1000));
-
-        const newKey = await Key.create({ key: generatedKey, expiresAt: expirationTime });
-        return res.status(200).json({ success: true, key: newKey });
+        const allKeys = await Key.find({}).lean();
+        return res.status(200).json({ success: true, keys: allKeys });
     } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/admin/profile/notes', async (req, res) => {
+app.delete('/api/admin/keys/delete/:id', async (req, res) => {
     try {
-        const { robloxUserId, notes } = req.body;
-        await UserProfile.findOneAndUpdate({ robloxUserId: String(robloxUserId) }, { adminNotes: notes }, { upsert: true });
-        return res.status(200).json({ success: true, message: "Account note synchronized." });
+        const targetId = req.params.id;
+        await Key.deleteOne({ _id: targetId });
+        return res.status(200).json({ success: true, message: "Purge execution array complete." });
     } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
 app.post('/api/admin/keys/blacklist', async (req, res) => {
+    const { key, reason } = req.body;
     try {
-        const { key, reason } = req.body;
-        const target = await Key.findOneAndUpdate({ key }, { isBlacklisted: true, blacklistReason: reason }, { new: true });
-        if (!target) return res.status(404).json({ success: false, error: "License key untracked." });
-
-        if (target.assignedUserId) {
-            await ShadowBlacklist.findOneAndUpdate(
-                { robloxUserId: target.assignedUserId },
-                { robloxUserId: target.assignedUserId, hwid: target.assignedHWID || "MANUAL_BAN", reason: reason || "Manual System Administrator Action Overrule" },
-                { upsert: true }
-            );
-        }
-        return res.status(200).json({ success: true, message: "Token suspended." });
+        const updated = await Key.findOneAndUpdate({ key: String(key) }, { isBlacklisted: true, blacklistReason: reason || "Unspecified policy violation." }, { new: true });
+        if (!updated) return res.status(404).json({ success: false, message: "Target token array footprint missing." });
+        return res.status(200).json({ success: true, message: "Token tracking state marked blacklisted." });
     } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/admin/keys/restore', async (req, res) => {
+app.post('/api/admin/bans/hwid', async (req, res) => {
+    const { hwid, reason } = req.body;
     try {
-        const { key } = req.body;
-        const target = await Key.findOneAndUpdate({ key }, { 
-            isBlacklisted: false, blacklistReason: "", assignedUser: "", assignedUserId: "", assignedHWID: "", assignedExecutor: "", activatedAt: null 
-        }, { new: true });
-
-        if (target && target.assignedUserId) {
-            await ShadowBlacklist.deleteOne({ robloxUserId: target.assignedUserId });
-        }
-        return res.status(200).json({ success: true, message: "Token configuration footprint cleansed." });
+        await new HWIDBan({ hwid: String(hwid), reason: reason || "Administrative Hardware Purge Action" }).save();
+        return res.status(201).json({ success: true, message: "Workstation terminal parameters locked out successfully." });
     } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.get('/api/admin/blacklist/all', async (req, res) => {
+app.get('/api/admin/bans/hwid', async (req, res) => {
+    try {
+        const structuralBans = await HWIDBan.find({}).lean();
+        return res.status(200).json({ success: true, bans: structuralBans });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/admin/bans/hwid/remove/:id', async (req, res) => {
+    try {
+        const targetId = req.params.id;
+        await HWIDBan.deleteOne({ _id: targetId });
+        return res.status(200).json({ success: true, message: "Hardware authorization parameters updated." });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/admin/logs', async (req, res) => {
+    try {
+        const traceLogs = await AuditLog.find({}).sort({ timestamp: -1 }).limit(150).lean();
+        return res.status(200).json({ success: true, logs: traceLogs });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/admin/blacklist/shadow', async (req, res) => {
+    const { robloxUserId, robloxUsername, reason } = req.body;
+    try {
+        await new ShadowBlacklist({ robloxUserId: String(robloxUserId), robloxUsername, reason: reason || "Profile target flag set." }).save();
+        return res.status(201).json({ success: true, message: "Profiles metrics targeted." });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/admin/blacklist/shadow', async (req, res) => {
     try {
         const bannedProfiles = await ShadowBlacklist.find().sort({ flaggedAt: -1 }).lean();
         return res.status(200).json({ success: true, blacklist: bannedProfiles });
@@ -442,11 +302,11 @@ app.post('/api/admin/logs/clear', async (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/trial-portal', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'trial.html'));
-});
-
-app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`>>> Spectre Network Engine online on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(`🛰️  Spectre Core Matrix Engine initialized on port ${PORT}`);
+    console.log(`=======================================================`);
+});
